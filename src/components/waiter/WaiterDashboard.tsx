@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useWaiterEvents } from './useWaiterEvents';
 import { FloorPlan, type TableGroup } from './FloorPlan';
+import { RESTAURANT } from '../../config/restaurant';
 import { formatElapsed, formatMoney, formatTime } from '../../lib/format';
 
 interface TableTile {
@@ -139,9 +140,11 @@ export function WaiterDashboard({ userName }: { userName: string }) {
             Sold out
           </Link>
 
-          <Link href="/waiter/specials" className="btn-secondary px-3 py-2 text-sm">
-            Saturday dish
-          </Link>
+          {RESTAURANT.saturdayMenu && (
+            <Link href="/waiter/specials" className="btn-secondary px-3 py-2 text-sm">
+              Saturday dish
+            </Link>
+          )}
 
           <form action="/api/waiter/auth/signout" method="post">
             <button

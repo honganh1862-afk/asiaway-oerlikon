@@ -38,6 +38,7 @@ export function useWaiterEvents(soundEnabled: boolean) {
   const [notifications, setNotifications] = useState<PendingNotification[]>([]);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
   const previousIds = useRef<Set<string>>(new Set());
+  const loaded = useRef(false);
   const audioRef = useRef<AudioContext | null>(null);
   const failures = useRef(0);
 
@@ -76,8 +77,12 @@ export function useWaiterEvents(soundEnabled: boolean) {
       const data = await response.json();
       const next: PendingNotification[] = data.notifications;
 
+      // Silent on the first read only, so opening the screen does not chime for
+      // what is already waiting. Checking for an empty queue instead silenced
+      // the first order to arrive into one, which is most orders.
       const incoming = next.filter((n) => !previousIds.current.has(n.id));
-      if (incoming.length > 0 && previousIds.current.size > 0) chime();
+      if (incoming.length > 0 && loaded.current) chime();
+      loaded.current = true;
       previousIds.current = new Set(next.map((n) => n.id));
 
       setNotifications(next);
