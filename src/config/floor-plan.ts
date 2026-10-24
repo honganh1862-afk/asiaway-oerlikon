@@ -32,7 +32,7 @@ export interface FloorFixture {
   readonly row: number;
   readonly colSpan?: number;
   readonly rowSpan?: number;
-  readonly kind: 'buffet' | 'bar' | 'entrance' | 'landmark' | 'divider';
+  readonly kind: 'buffet' | 'bar' | 'entrance' | 'landmark' | 'plant' | 'divider';
 }
 
 export interface FloorLayout {
@@ -138,7 +138,7 @@ const WINTERTHUR: FloorLayout = {
     'tables', // 13 — stairs · 231
     'tables', // 14 — 211 · 221 · 230
     'tables', // 15 — 210 · 220 · 333 · 332 · 331 · 330
-    'tables', // 16 — 325 · 324 · 323 · 322 · 321 · 320
+    'tables', // 16 — 325 · 324 · 323 · 322 · peach tree · 321 · 320
     'tables', // 17 — entrance · 313 · 312 · 311 · 310
   ],
 
@@ -210,6 +210,8 @@ const WINTERTHUR: FloorLayout = {
     { label: 'Bar', col: 6, row: 11, colSpan: 2, rowSpan: 4, kind: 'bar' },
     { label: 'Stairs', col: 1, row: 12, colSpan: 3, rowSpan: 2, kind: 'landmark' },
     { label: 'Entrance · Mall', col: 1, row: 17, colSpan: 2, kind: 'entrance' },
+    // The tree between the long table and 321, which is why 322 and 321 never join.
+    { label: 'Peach tree', col: 8, row: 16, kind: 'plant' },
   ],
 
   // The restaurant's rule, 2026-10-24: square tables can be joined, round ones

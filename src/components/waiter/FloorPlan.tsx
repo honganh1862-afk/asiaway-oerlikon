@@ -41,6 +41,8 @@ const FIXTURE_STYLE: Record<string, string> = {
   bar: 'rounded-full border border-dashed border-ink/25 bg-surface-sunken text-ink-muted',
   entrance: 'rounded-xl border border-dashed border-ink/25 text-ink-muted',
   landmark: 'rounded-xl border border-dashed border-ink/25 text-ink-muted',
+  // Round, so a tree never reads as a table.
+  plant: 'rounded-full border border-dashed border-ink/25 text-ink-muted',
   // A room divider is a solid screen between two runs of tables.
   divider: 'self-center h-1 w-full rounded-full bg-ink/30',
 };

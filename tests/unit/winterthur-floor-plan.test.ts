@@ -84,6 +84,14 @@ describe('Winterthur floor plan', () => {
     expect(positionFor('313', plan)!.row).toBeGreaterThan(positionFor('110', plan)!.row);
   });
 
+  it('draws the peach tree in the gap between 322 and 321', () => {
+    const tree = plan.fixtures.find((f) => f.kind === 'plant');
+    const [t322, t321] = [positionFor('322', plan)!, positionFor('321', plan)!];
+    expect(tree).toMatchObject({ label: 'Peach tree', row: t322.row });
+    expect(tree!.col).toBeGreaterThan(t322.col);
+    expect(tree!.col).toBeLessThan(t321.col);
+  });
+
   it('provisions exactly the tables on the plan, all of them inside', () => {
     const { tables } = JSON.parse(
       readFileSync(resolve(__dirname, '../../data/winterthur-tables.json'), 'utf8'),
