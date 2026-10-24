@@ -17,6 +17,8 @@
   "menu.title": "Thực đơn",
   "menu.food": "Món ăn",
   "menu.drinks": "Đồ uống",
+  "menu.vietnamese": "Việt Nam",
+  "menu.thai": "Thái",
   "menu.drinks.empty": "Danh sách đồ uống chưa có ở đây. Vui lòng hỏi nhân viên phục vụ.",
   "menu.empty": "Hiện chưa có món nào.",
   "menu.soldOut": "Hết món",

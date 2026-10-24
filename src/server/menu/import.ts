@@ -88,6 +88,66 @@ export const CATEGORY_META: Readonly<Record<string, CategoryMeta>> = {
     nameVi: 'Cá & cà ri',
     sortOrder: 5,
   },
+
+  // The Thai menu (data/thai_menu_EN_DE_VI.csv), served in Winterthur only.
+  // `thai-` slugs are what put these categories on the guest's Thai tab
+  // (domain/menu/menus.ts).
+  'Thai Appetizer': {
+    slug: 'thai-appetizer',
+    kind: 'FOOD',
+    nameEn: 'Appetizers & Soups',
+    nameDe: 'Vorspeisen & Suppen',
+    nameVi: 'Khai vị & súp',
+    sortOrder: 10,
+  },
+  'Thai Salad': {
+    slug: 'thai-salad',
+    kind: 'FOOD',
+    nameEn: 'Salads',
+    nameDe: 'Salate',
+    nameVi: 'Gỏi',
+    sortOrder: 11,
+  },
+  'Thai Curry': {
+    slug: 'thai-curry',
+    kind: 'FOOD',
+    nameEn: 'Curries',
+    nameDe: 'Currys',
+    nameVi: 'Cà ri',
+    sortOrder: 12,
+  },
+  'Thai Stir-fry': {
+    slug: 'thai-stir-fry',
+    kind: 'FOOD',
+    nameEn: 'Stir-fried Dishes',
+    nameDe: 'Gebratene Gerichte',
+    nameVi: 'Món xào',
+    sortOrder: 13,
+  },
+  'Thai Noodles & Rice': {
+    slug: 'thai-noodles-and-rice',
+    kind: 'FOOD',
+    nameEn: 'Noodles & Rice',
+    nameDe: 'Nudeln & Reis',
+    nameVi: 'Mì & cơm',
+    sortOrder: 14,
+  },
+  'Thai Fish': {
+    slug: 'thai-fish',
+    kind: 'FOOD',
+    nameEn: 'Fish',
+    nameDe: 'Fisch',
+    nameVi: 'Cá',
+    sortOrder: 15,
+  },
+  'Thai Specialities': {
+    slug: 'thai-specialities',
+    kind: 'FOOD',
+    nameEn: 'Thai Specialities',
+    nameDe: 'Thai-Spezialitäten',
+    nameVi: 'Đặc sản Thái',
+    sortOrder: 16,
+  },
 };
 
 export interface ImportedMenuItem {
@@ -149,7 +209,17 @@ function requireColumn(row: Record<string, string>, column: string, lineNo: numb
   return trimmed;
 }
 
-export function parseMenuCsv(csvText: string): ImportedMenu {
+export interface ParseMenuOptions {
+  /**
+   * A blank allergen cell means NOT DECLARED, as in the drinks list, instead of
+   * an error. Only for a menu that prints no allergens at all — the Thai menu
+   * says to ask the staff. The Vietnamese menu declares them, so a blank there
+   * is still a mistake to stop on.
+   */
+  readonly allowUndeclaredAllergens?: boolean;
+}
+
+export function parseMenuCsv(csvText: string, options: ParseMenuOptions = {}): ImportedMenu {
   const rows = parse(csvText, {
     columns: true,
     skip_empty_lines: true,
@@ -178,7 +248,9 @@ export function parseMenuCsv(csvText: string): ImportedMenu {
       descriptionDe: requireColumn(row, CSV_COLUMNS.descriptionDe, lineNo),
       descriptionVi: requireColumn(row, CSV_COLUMNS.descriptionVi, lineNo),
       priceRaw: requireColumn(row, CSV_COLUMNS.price, lineNo),
-      allergensRaw: requireColumn(row, CSV_COLUMNS.allergens, lineNo),
+      allergensRaw: options.allowUndeclaredAllergens
+        ? (row[CSV_COLUMNS.allergens] ?? '').trim()
+        : requireColumn(row, CSV_COLUMNS.allergens, lineNo),
     };
   });
 

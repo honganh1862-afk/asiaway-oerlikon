@@ -17,6 +17,8 @@
   "menu.title": "Menu",
   "menu.food": "Food",
   "menu.drinks": "Drinks",
+  "menu.vietnamese": "Vietnamese",
+  "menu.thai": "Thai",
   "menu.drinks.empty": "Our drinks list is not available here yet. Please ask your waiter.",
   "menu.empty": "No dishes available right now.",
   "menu.soldOut": "Sold out",

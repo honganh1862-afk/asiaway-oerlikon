@@ -17,6 +17,8 @@
   "menu.title": "Speisekarte",
   "menu.food": "Speisen",
   "menu.drinks": "Getränke",
+  "menu.vietnamese": "Vietnamesisch",
+  "menu.thai": "Thai",
   "menu.drinks.empty": "Unsere Getränkekarte ist hier noch nicht verfügbar. Bitte fragen Sie Ihre Bedienung.",
   "menu.empty": "Zurzeit sind keine Gerichte verfügbar.",
   "menu.soldOut": "Ausverkauft",

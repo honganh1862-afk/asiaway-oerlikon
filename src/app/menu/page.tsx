@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCustomer } from '../../components/customer/CustomerProvider';
 import { MenuHighlights } from '../../components/customer/MenuHighlights';
+import { menuTabFor, type MenuTab } from '../../domain/menu/menus';
 import { formatMoney } from '../../lib/format';
 
 interface MenuItem {
@@ -30,7 +31,7 @@ export default function MenuPage() {
   const { t, locale, addToCart } = useCustomer();
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [error, setError] = useState(false);
-  const [tab, setTab] = useState<'FOOD' | 'DRINK'>('FOOD');
+  const [tab, setTab] = useState<MenuTab>('FOOD');
   const [justAdded, setJustAdded] = useState<string | null>(null);
 
   // The page opens in the default language and switches to the guest's saved
@@ -62,7 +63,21 @@ export default function MenuPage() {
     return () => clearInterval(id);
   }, [locale]);
 
-  const shown = (categories ?? []).filter((c) => c.kind === tab);
+  // Where both printed menus are served (Winterthur), each gets its own tab:
+  // Vietnamesisch · Thai · Getränke. Elsewhere it stays Speisen · Getränke.
+  const hasThai = (categories ?? []).some((c) => menuTabFor(c) === 'THAI');
+  const tabs: { id: MenuTab; label: string }[] = hasThai
+    ? [
+        { id: 'FOOD', label: t('menu.vietnamese') },
+        { id: 'THAI', label: t('menu.thai') },
+        { id: 'DRINK', label: t('menu.drinks') },
+      ]
+    : [
+        { id: 'FOOD', label: t('menu.food') },
+        { id: 'DRINK', label: t('menu.drinks') },
+      ];
+
+  const shown = (categories ?? []).filter((c) => menuTabFor(c) === tab);
   const sectionId = (category: Category) => `cat-${category.slug}`;
 
   // Which category the guest is reading, so the bar can show where they are.
@@ -109,29 +124,27 @@ export default function MenuPage() {
     setActive(id);
   };
 
-  // Photographed dishes, in menu order. Sold-out ones stay in the strip so the
-  // menu does not appear to change shape through the evening; the card says so.
-  const photographed = (categories ?? [])
-    .filter((c) => c.kind === 'FOOD')
-    .flatMap((c) => c.items)
-    .filter((i) => i.imagePath);
+  // Photographed dishes of the open tab, in menu order. Sold-out ones stay in
+  // the strip so the menu does not appear to change shape through the evening;
+  // the card says so.
+  const photographed = tab === 'DRINK' ? [] : shown.flatMap((c) => c.items).filter((i) => i.imagePath);
 
   return (
     <div className="space-y-5">
       <h1 className="h-section">{t('menu.title')}</h1>
 
       <div className="flex gap-2" role="tablist">
-        {(['FOOD', 'DRINK'] as const).map((kind) => (
+        {tabs.map(({ id, label }) => (
           <button
-            key={kind}
+            key={id}
             role="tab"
-            aria-selected={tab === kind}
-            onClick={() => setTab(kind)}
-            className={`min-h-tap flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${
-              tab === kind ? 'bg-brand-600 text-white' : 'bg-surface text-ink-muted border border-ink/10'
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`min-h-tap flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
+              tab === id ? 'bg-brand-600 text-white' : 'bg-surface text-ink-muted border border-ink/10'
             }`}
           >
-            {kind === 'FOOD' ? t('menu.food') : t('menu.drinks')}
+            {label}
           </button>
         ))}
       </div>
@@ -204,7 +217,7 @@ export default function MenuPage() {
       {/* Photographed dishes get their own strip. Showing them here rather than
           as a thumbnail per row keeps the list itself clean, since only 17 of
           106 items have a picture. */}
-      {tab === 'FOOD' && (
+      {tab !== 'DRINK' && (
         <MenuHighlights
           items={photographed}
           t={t}

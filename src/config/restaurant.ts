@@ -32,11 +32,28 @@ export interface RestaurantProfile {
   readonly payment: 'table' | 'counter';
   /** Whether guests can call a member of staff to their table from their phone. */
   readonly guestCallsStaff: boolean;
+  /**
+   * Whether the Thai menu is served beside the Vietnamese one. Winterthur has
+   * both, each on its own tab; Oerlikon has the Vietnamese menu only.
+   */
+  readonly thaiMenu: boolean;
 }
 
 export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, RestaurantProfile>> = {
-  oerlikon: { saturdayMenu: true, queueWaiterOrders: false, payment: 'table', guestCallsStaff: false },
-  winterthur: { saturdayMenu: false, queueWaiterOrders: true, payment: 'counter', guestCallsStaff: true },
+  oerlikon: {
+    saturdayMenu: true,
+    queueWaiterOrders: false,
+    payment: 'table',
+    guestCallsStaff: false,
+    thaiMenu: false,
+  },
+  winterthur: {
+    saturdayMenu: false,
+    queueWaiterOrders: true,
+    payment: 'counter',
+    guestCallsStaff: true,
+    thaiMenu: true,
+  },
 };
 
 /**

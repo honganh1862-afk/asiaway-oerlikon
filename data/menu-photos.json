@@ -11,7 +11,15 @@
     "goes to 91.3 alone for the same reason.",
     "",
     "Dishes absent from this file have no photograph and render none. The menu",
-    "PDF simply does not contain one for them; nothing has been substituted."
+    "PDF simply does not contain one for them; nothing has been substituted.",
+    "",
+    "The Thai dishes (2xx) come from the restaurant's Thai menu PDF the same",
+    "way, cut from its full-page photos. A photo goes only on the option it",
+    "shows: one-option dishes, options the caption names (260 chicken, 262",
+    "beef, 264 chicken), options the plate plainly shows (223 seafood, 243",
+    "beef, 270 prawns) and each fish sauce. 222, 240, 242, 244, 263, 271, 272",
+    "and 273 have photos in the PDF whose protein cannot be told, so none is",
+    "shown until the restaurant says which option each one is."
   ],
   "photos": {
     "12.2": "/images/menu/dish-12.2.jpg",
@@ -30,6 +38,27 @@
     "64": "/images/menu/dish-64.jpg",
     "65": "/images/menu/dish-65.jpg",
     "91.3": "/images/menu/dish-91.3.jpg",
-    "94": "/images/menu/dish-94.jpg"
+    "94": "/images/menu/dish-94.jpg",
+    "200": "/images/menu/dish-200.jpg",
+    "201": "/images/menu/dish-201.jpg",
+    "202": "/images/menu/dish-202.jpg",
+    "220": "/images/menu/dish-220.jpg",
+    "223.1": "/images/menu/dish-223.1.jpg",
+    "224": "/images/menu/dish-224.jpg",
+    "225": "/images/menu/dish-225.jpg",
+    "243.3": "/images/menu/dish-243.3.jpg",
+    "260.2": "/images/menu/dish-260.2.jpg",
+    "262.2": "/images/menu/dish-262.2.jpg",
+    "264.2": "/images/menu/dish-264.2.jpg",
+    "270.4": "/images/menu/dish-270.4.jpg",
+    "280.1": "/images/menu/dish-280.1.jpg",
+    "280.3": "/images/menu/dish-280.3.jpg",
+    "280.4": "/images/menu/dish-280.4.jpg",
+    "280.5": "/images/menu/dish-280.5.jpg",
+    "280.7": "/images/menu/dish-280.7.jpg",
+    "290": "/images/menu/dish-290.jpg",
+    "291": "/images/menu/dish-291.jpg",
+    "292": "/images/menu/dish-292.jpg",
+    "293": "/images/menu/dish-293.jpg"
   }
 }
