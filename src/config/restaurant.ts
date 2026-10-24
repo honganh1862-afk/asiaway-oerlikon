@@ -24,11 +24,19 @@ export interface RestaurantProfile {
    * the iPad enters every order; in Oerlikon the waiter who took it does.
    */
   readonly queueWaiterOrders: boolean;
+  /**
+   * Where guests pay. "table": they ask for the bill and staff bring it over.
+   * "counter": they pay, and get the bill, at Winterthur's counter in front of
+   * the stairs, so there is no bill to ask for.
+   */
+  readonly payment: 'table' | 'counter';
+  /** Whether guests can call a member of staff to their table from their phone. */
+  readonly guestCallsStaff: boolean;
 }
 
 export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, RestaurantProfile>> = {
-  oerlikon: { saturdayMenu: true, queueWaiterOrders: false },
-  winterthur: { saturdayMenu: false, queueWaiterOrders: true },
+  oerlikon: { saturdayMenu: true, queueWaiterOrders: false, payment: 'table', guestCallsStaff: false },
+  winterthur: { saturdayMenu: false, queueWaiterOrders: true, payment: 'counter', guestCallsStaff: true },
 };
 
 /**

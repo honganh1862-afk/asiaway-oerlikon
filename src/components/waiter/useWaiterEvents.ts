@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface PendingNotification {
   id: string;
-  type: 'NEW_ORDER' | 'CHECKOUT_REQUESTED' | 'ORDER_UPDATED';
+  type: 'NEW_ORDER' | 'CHECKOUT_REQUESTED' | 'ORDER_UPDATED' | 'STAFF_CALLED';
   createdAt: string;
   tableNumber: string | null;
   tableLabel: string | null;
@@ -129,7 +129,13 @@ export function useWaiterEvents(soundEnabled: boolean) {
         void refresh();
       });
 
-      for (const type of ['new_order', 'checkout_requested', 'order_updated', 'availability_changed']) {
+      for (const type of [
+        'new_order',
+        'checkout_requested',
+        'staff_called',
+        'order_updated',
+        'availability_changed',
+      ]) {
         source.addEventListener(type, () => void refresh());
       }
 
@@ -192,5 +198,6 @@ export function useWaiterEvents(soundEnabled: boolean) {
     acknowledge,
     newOrderCount: notifications.filter((n) => n.type === 'NEW_ORDER').length,
     checkoutCount: notifications.filter((n) => n.type === 'CHECKOUT_REQUESTED').length,
+    staffCallCount: notifications.filter((n) => n.type === 'STAFF_CALLED').length,
   };
 }

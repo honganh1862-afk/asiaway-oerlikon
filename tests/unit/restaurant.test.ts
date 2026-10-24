@@ -25,6 +25,11 @@ describe('which restaurant a deployment serves', () => {
     expect(RESTAURANT_PROFILES.winterthur.saturdayMenu).toBe(false);
   });
 
+  it('takes payment at the counter and lets guests call staff in Winterthur only', () => {
+    expect(RESTAURANT_PROFILES.winterthur).toMatchObject({ payment: 'counter', guestCallsStaff: true });
+    expect(RESTAURANT_PROFILES.oerlikon).toMatchObject({ payment: 'table', guestCallsStaff: false });
+  });
+
   it('sends waiter-taken orders to the POS queue in Winterthur only', () => {
     expect(RESTAURANT_PROFILES.winterthur.queueWaiterOrders).toBe(true);
     expect(RESTAURANT_PROFILES.oerlikon.queueWaiterOrders).toBe(false);
