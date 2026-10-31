@@ -87,6 +87,14 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     if (hydrated) write(CART_KEY, cart);
   }, [cart, hydrated]);
 
+  // Keeps the pages, photos and menu a guest has seen on the phone, so a weak
+  // signal at the table does not blank the menu (public/sw.js). Production
+  // only: in development it would keep serving yesterday's code.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  }, []);
+
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     write(LOCALE_KEY, next);

@@ -1,11 +1,12 @@
-import { photoSrcSet } from '../../lib/photo';
+import { photoSrcSet, prefersLowData } from '../../lib/photo';
 
 /**
  * A dish photograph at the size the screen needs.
  *
- * `sizes` says how wide the photo is drawn, so a phone downloads the 800 px copy
- * for a card and never the 1200 px one unless the screen can use it. Images
- * without variants fall back to a plain image of the stored path.
+ * `sizes` says how wide the photo is drawn, so a phone downloads the copy its
+ * screen needs, up to 800 px — or 480 px when its connection is slow (see
+ * lib/photo). Images without variants fall back to a plain image of the stored
+ * path.
  */
 export function DishPhoto({
   src,
@@ -20,7 +21,7 @@ export function DishPhoto({
   className?: string;
   eager?: boolean;
 }) {
-  const srcSet = photoSrcSet(src);
+  const srcSet = photoSrcSet(src, prefersLowData());
   const img = (
     // eslint-disable-next-line @next/next/no-img-element
     <img

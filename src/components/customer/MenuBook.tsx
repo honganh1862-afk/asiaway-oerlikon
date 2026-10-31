@@ -16,7 +16,7 @@ import type { MenuTab } from '../../domain/menu/menus';
 import type { MessageKey, Translator } from '../../i18n';
 import type { Locale } from '../../i18n/locales';
 import { formatPrice } from '../../lib/format';
-import { photoSrcSet } from '../../lib/photo';
+import { photoSrcSet, prefersLowData } from '../../lib/photo';
 import { DishPhoto } from './DishPhoto';
 import { PAYING } from './GuestJourney';
 import type { Category, MenuItem } from './useMenu';
@@ -223,7 +223,7 @@ export function MenuBook({
       if (page?.kind !== 'photo' || !page.item.imagePath) continue;
       const img = new Image();
       img.sizes = PHOTO_SIZES;
-      img.srcset = photoSrcSet(page.item.imagePath) ?? '';
+      img.srcset = photoSrcSet(page.item.imagePath, prefersLowData()) ?? '';
       img.src = page.item.imagePath;
     }
   }, [pages, current]);

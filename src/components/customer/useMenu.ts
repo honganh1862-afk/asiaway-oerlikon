@@ -29,7 +29,13 @@ export interface Category {
 
 /**
  * The guest menu in the guest's language, shared by the classic and the modern
- * view so both always show the same dishes, prices and sold-out marks.
+ * view so both always show the same dishes and prices.
+ *
+ * The last copy is kept for the visit, so moving between the views, opening a
+ * dish and coming back, or a weak signal for a moment never leaves the guest
+ * looking at an empty page: the copy shows at once, and a fresh one replaces it
+ * when it arrives. The menu only changes when the restaurant loads it again, so
+ * it is fetched once per screen rather than polled.
  */
 export function useMenu(locale: Locale) {
   const [categories, setCategories] = useState<Category[] | null>(null);
@@ -41,30 +47,42 @@ export function useMenu(locale: Locale) {
   const latest = useRef(0);
   const load = useCallback(() => {
     const request = ++latest.current;
+    const kept = readKeptMenu(locale);
     setError(false);
-    setCategories(null);
+    setCategories(kept);
     fetch(`/api/menu?lang=${locale}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('menu'))))
-      .then((data) => request === latest.current && setCategories(data.categories))
-      .catch(() => request === latest.current && setError(true));
+      .then((data) => {
+        if (request !== latest.current) return;
+        setCategories(data.categories);
+        keepMenu(locale, data.categories);
+      })
+      // With a copy on screen, a failed refresh is not worth an error.
+      .catch(() => request === latest.current && !kept && setError(true));
   }, [locale]);
 
   useEffect(load, [load]);
 
-  // Availability changes while the guest is browsing, so the menu refreshes
-  // quietly and a dish sold out at the pass stops being offered.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const request = ++latest.current;
-      fetch(`/api/menu?lang=${locale}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => data && request === latest.current && setCategories(data.categories))
-        .catch(() => undefined);
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [locale]);
-
   return { categories, error, reload: load };
+}
+
+const keptKey = (locale: Locale) => `aw.menu.${locale}`;
+
+function readKeptMenu(locale: Locale): Category[] | null {
+  try {
+    const raw = window.sessionStorage.getItem(keptKey(locale));
+    return raw ? (JSON.parse(raw) as Category[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function keepMenu(locale: Locale, categories: Category[]): void {
+  try {
+    window.sessionStorage.setItem(keptKey(locale), JSON.stringify(categories));
+  } catch {
+    // Full or blocked storage: the next screen simply fetches again.
+  }
 }
 
 /**

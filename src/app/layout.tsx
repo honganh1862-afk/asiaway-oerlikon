@@ -13,8 +13,11 @@ const plexSans = IBM_Plex_Sans({
   display: 'swap',
 });
 
+/* Only the Latin glyphs: nothing on the site is written in Thai script (the
+   Thai menu is in English, German and Vietnamese), and the Thai subset cost
+   every guest four more files, about 33 KB. */
 const plexThai = IBM_Plex_Sans_Thai({
-  subsets: ['latin', 'thai'],
+  subsets: ['latin'],
   weight: ['300', '400', '500', '600'],
   variable: '--font-plex-thai',
   display: 'swap',
@@ -27,6 +30,9 @@ const book = Comfortaa({
   weight: ['400', '700'],
   variable: '--font-book',
   display: 'swap',
+  // Only the classic menu and the start screen use it, so it is fetched where it
+  // appears rather than with every page (about 31 KB).
+  preload: false,
 });
 
 export const metadata: Metadata = {

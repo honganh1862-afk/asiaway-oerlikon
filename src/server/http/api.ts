@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import { DomainError } from '../../domain/errors';
 
+/**
+ * Headers for what a guest reads: the menu, a dish, the allergen legend.
+ *
+ * They change only when the restaurant loads the menu again, and at midnight,
+ * when the Saturday dishes come and go. So Vercel keeps a copy for five minutes
+ * and, past that, serves it while fetching a fresh one in the background for up
+ * to a day: no guest waits for a database that has gone to sleep. A phone keeps
+ * its own copy for a minute, and a stale one for ten while it checks again.
+ */
+export const MENU_CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=60, stale-while-revalidate=600',
+  'CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400',
+} as const;
+
 /** Stable error codes; localised text is chosen by the client from the code. */
 const STATUS_BY_CODE: Record<string, number> = {
   VALIDATION_FAILED: 400,

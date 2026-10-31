@@ -9,12 +9,16 @@ const manifest = JSON.parse(
 ) as { photos: Record<string, string> };
 
 describe('dish photo sizes', () => {
-  it('offers the three WebP widths beside a stored dish photo', () => {
+  it('offers 480 and 800 px beside a stored dish photo, never the 270 KB 1200 px copy', () => {
     expect(photoSrcSet('/images/menu/dish-43.jpg')).toBe(
-      '/images/menu/dish-43-480.webp 480w, /images/menu/dish-43-800.webp 800w, /images/menu/dish-43-1200.webp 1200w',
+      '/images/menu/dish-43-480.webp 480w, /images/menu/dish-43-800.webp 800w',
     );
     // Dotted dish numbers keep their dot.
     expect(photoSrcSet('/images/menu/dish-12.2.jpg')).toContain('/images/menu/dish-12.2-800.webp 800w');
+  });
+
+  it('offers only the 480 px copy when data is scarce', () => {
+    expect(photoSrcSet('/images/menu/dish-43.jpg', true)).toBe('/images/menu/dish-43-480.webp 480w');
   });
 
   it('leaves every other image alone, such as the weekly special from the database', () => {
