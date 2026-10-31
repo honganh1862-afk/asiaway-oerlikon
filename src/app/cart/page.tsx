@@ -2,11 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
 import { useCustomer } from '../../components/customer/CustomerProvider';
 import { GuestJourney, PayPrompt } from '../../components/customer/GuestJourney';
-import { RESTAURANT } from '../../config/restaurant';
-import { formatMoney, formatTime } from '../../lib/format';
+import { formatMoney } from '../../lib/format';
 
 /**
  * The guest's cart: what they would like, to show the waiter.
@@ -14,60 +12,10 @@ import { formatMoney, formatTime } from '../../lib/format';
  * Nothing here is sent to the kitchen. The waiter comes to the table, takes the
  * order from this list and keys it into the POS, so dish numbers are printed
  * large — they are what the waiter types.
- *
- * Where guests may call staff (Winterthur), and only once they have scanned a
- * table's code, the page offers to call a waiter over. A call stands until
- * staff clear it, so pressing again alerts nobody twice.
  */
 export default function CartPage() {
   const { t, cart, setQuantity, removeFromCart, clearCart, cartTotalCents } = useCustomer();
   const router = useRouter();
-
-  const [atTable, setAtTable] = useState(false);
-  const [calledAt, setCalledAt] = useState<string | null>(null);
-  const [calling, setCalling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadSession = useCallback(() => {
-    fetch('/api/session')
-      .then((r) => r.json())
-      .then((data) => {
-        setAtTable(Boolean(data.active));
-        setCalledAt(data.active ? (data.staffCalledAt ?? null) : null);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (RESTAURANT.guestCallsStaff) loadSession();
-  }, [loadSession]);
-
-  // While staff are on their way, look again now and then: once a waiter has
-  // cleared the call, the guest can call again without reloading.
-  useEffect(() => {
-    if (!calledAt) return;
-    const id = setInterval(loadSession, 15_000);
-    return () => clearInterval(id);
-  }, [calledAt, loadSession]);
-
-  async function callWaiter() {
-    if (calling) return;
-    setCalling(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/staff-call', { method: 'POST' });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(t('common.error'));
-        return;
-      }
-      setCalledAt(data.calledAt);
-    } catch {
-      setError(t('common.offline'));
-    } finally {
-      setCalling(false);
-    }
-  }
 
   if (cart.length === 0) {
     return (
@@ -82,8 +30,6 @@ export default function CartPage() {
       </div>
     );
   }
-
-  const canCall = RESTAURANT.guestCallsStaff && atTable;
 
   return (
     <div className="space-y-4">
@@ -150,37 +96,10 @@ export default function CartPage() {
       </div>
       <p className="text-xs text-ink-muted">{t('menu.vatNote')}</p>
 
-      {error && (
-        <p className="rounded-xl bg-danger-50 p-3 text-sm text-danger-500" role="alert">
-          {error}
-        </p>
-      )}
-
-      {canCall && (
-        <section className="card space-y-2 p-4" aria-live="polite">
-          {calledAt ? (
-            <>
-              <h2 className="font-semibold">{t('staffCall.called.title')}</h2>
-              <p className="text-sm text-ink-muted">
-                {t('staffCall.called.body', { time: formatTime(calledAt) })}
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="font-semibold">{t('staffCall.title')}</h2>
-              <p className="text-sm text-ink-muted">{t('staffCall.body')}</p>
-              <button className="btn-primary w-full" onClick={() => void callWaiter()} disabled={calling}>
-                {calling ? t('staffCall.calling') : t('staffCall.confirm')}
-              </button>
-            </>
-          )}
-        </section>
-      )}
-
       {/* Back to whichever menu, classic or modern, the guest came from. */}
       <button
         type="button"
-        className={`${canCall ? 'btn-secondary' : 'btn-primary'} w-full`}
+        className="btn-primary w-full"
         onClick={() => (window.history.length > 1 ? router.back() : router.push('/menu'))}
       >
         {t('cart.continue')}

@@ -16,10 +16,7 @@ export function GuestJourney({ current, t }: { current: 1 | 2 | 3 | 4; t: Transl
     { label: 'journey.choose', href: '/menu' },
     { label: 'journey.order', href: '/cart' },
     { label: 'journey.enjoy', href: null },
-    {
-      label: RESTAURANT.payment === 'counter' ? 'journey.pay.counter' : 'journey.pay.table',
-      href: '/pay',
-    },
+    { label: PAYING.step, href: '/pay' },
   ];
 
   return (
@@ -98,7 +95,7 @@ export function PayPrompt({ t }: { t: Translator }) {
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{t('pay.cta.title')}</span>
         <span className="block text-sm text-ink-muted">
-          {RESTAURANT.payment === 'counter' ? t('pay.cta.counter') : t('pay.cta.table')}
+          {t(PAYING.cta)}
         </span>
       </span>
       <span aria-hidden="true" className="text-xl text-ink-muted">
@@ -107,6 +104,34 @@ export function PayPrompt({ t }: { t: Translator }) {
     </Link>
   );
 }
+
+/** How this restaurant is paid, in the words each screen needs. */
+export const PAYING: Readonly<{
+  step: MessageKey;
+  title: MessageKey;
+  body: MessageKey;
+  cta: MessageKey;
+}> =
+  RESTAURANT.payment === 'table'
+    ? {
+        step: 'journey.pay.table',
+        title: 'pay.table.title',
+        body: 'pay.table.body',
+        cta: 'pay.cta.table',
+      }
+    : RESTAURANT.counterPlace === 'stairs'
+      ? {
+          step: 'journey.pay.counter',
+          title: 'pay.counter.title',
+          body: 'pay.counter.body.stairs',
+          cta: 'pay.cta.counter.stairs',
+        }
+      : {
+          step: 'journey.pay.counter',
+          title: 'pay.counter.title',
+          body: 'pay.counter.body',
+          cta: 'pay.cta.counter',
+        };
 
 const CARD_ICON = (
   <svg

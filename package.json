@@ -19,7 +19,6 @@
     "start": "node .next/standalone/server.js",
     "seed": "tsx scripts/seed.ts",
     "qr": "tsx scripts/generate-qr.ts",
-    "user:create": "tsx scripts/create-user.ts",
     "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {

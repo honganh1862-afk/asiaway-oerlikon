@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCustomer } from './CustomerProvider';
+import { readTableCookie } from '../../domain/table';
 import { LOCALE_LABELS, LOCALES, type Locale } from '../../i18n/locales';
 import { formatMoney } from '../../lib/format';
 
@@ -23,20 +24,8 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [table, setTable] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/session')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled && data.active) setTable(data.tableNumber);
-      })
-      .catch(() => {
-        // The header degrades to no table label; the menu still works.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Set by the link on the table card; without one the header just has no table.
+  useEffect(() => setTable(readTableCookie(document.cookie)), []);
 
   const immersive = pathname === '/menu/classic';
   // Not on the cart itself, nor once the guest is paying, and not on a dish's

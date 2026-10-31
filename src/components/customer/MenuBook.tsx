@@ -18,6 +18,7 @@ import type { Locale } from '../../i18n/locales';
 import { formatPrice } from '../../lib/format';
 import { photoSrcSet } from '../../lib/photo';
 import { DishPhoto } from './DishPhoto';
+import { PAYING } from './GuestJourney';
 import type { Category, MenuItem } from './useMenu';
 
 /**
@@ -170,7 +171,7 @@ export function MenuBook({
       // Last in the list, as on the back cover: paying, and a review.
       {
         id: 'back',
-        name: RESTAURANT.payment === 'counter' ? t('journey.pay.counter') : t('checkout.title'),
+        name: t(PAYING.step),
         page: pages.length - 1,
       },
     ],
@@ -748,13 +749,13 @@ function BackCoverPage({ t }: { t: Translator }) {
         <div className="mt-8 w-full border-y border-book-chalk/20 py-5">
           <p className="text-xs uppercase tracking-[0.25em] text-book-dim">{t('book.finished')}</p>
           <p className="mt-2 font-display text-lg font-semibold leading-snug text-book-chalk">
-            {RESTAURANT.payment === 'counter' ? t('pay.counter.body') : t('checkout.body')}
+            {t(PAYING.body)}
           </p>
           <Link
             href="/pay"
             className="mt-4 inline-flex min-h-tap items-center gap-2 border border-book-chalk/60 px-4 text-sm font-semibold uppercase tracking-section text-book-chalk"
           >
-            {RESTAURANT.payment === 'counter' ? t('journey.pay.counter') : t('checkout.title')}
+            {t(PAYING.step)}
             <span aria-hidden="true">→</span>
           </Link>
         </div>

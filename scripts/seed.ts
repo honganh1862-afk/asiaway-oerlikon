@@ -3,17 +3,17 @@
  *
  *   npm run seed
  *
- * Creates DEMO data only: three test tables and one test waiter account, plus
- * the real menu from the supplied CSV.
+ * Creates DEMO data only: three test tables, plus the real menu from the
+ * supplied CSVs.
  *
- * It deliberately does NOT invent the restaurant's real table list, drinks or
- * staff. Those are supplied later; until then everything here is labelled DEMO.
+ * It deliberately does NOT invent the restaurant's real table list; that lives
+ * in data/<restaurant>-tables.json and goes in through /api/admin/setup.
  * Running it against a production database is refused unless SEED_ALLOW_PROD is
  * set explicitly.
  */
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { PGlite } from '@electric-sql/pglite';
 import { createPostgresDatabase, type AppDatabase } from '../src/server/db/client';
 import { createPgliteDatabase } from '../src/server/db/pglite';
@@ -25,26 +25,19 @@ import {
   menuCategories,
   menuItems,
   restaurantTables,
-  users,
 } from '../src/server/db/schema';
 import { loadFoodMenus } from '../src/server/menu/food-menus';
 import { MISSING_ALLERGEN_WARNING, parseDrinksCsv } from '../src/server/menu/drinks-import';
 import { loadPhotoManifest, photoFor } from '../src/server/menu/photos';
 import { ALLERGENS } from '../src/domain/menu/allergens';
-import { generateQrToken, qrUrlFor } from '../src/domain/session/qr-token';
-import { hashPassword } from '../src/server/auth/password';
+import { generateQrToken } from '../src/domain/session/qr-token';
+import { tableUrl } from '../src/domain/table';
 
 const DEMO_TABLES = [
   { tableNumber: '01', displayName: 'Table 01 (DEMO)' },
   { tableNumber: '02', displayName: 'Table 02 (DEMO)' },
   { tableNumber: '03', displayName: 'Table 03 (DEMO)' },
 ];
-
-const DEMO_WAITER = {
-  email: 'waiter@asiaway.test',
-  displayName: 'Demo Waiter',
-  password: process.env.SEED_WAITER_PASSWORD ?? 'asiaway-demo-2026',
-};
 
 async function seedMenu(db: AppDatabase): Promise<number> {
   const photos = loadPhotoManifest();
@@ -140,33 +133,13 @@ async function seedTables(db: AppDatabase, baseUrl: string) {
       .from(restaurantTables)
       .where(eq(restaurantTables.tableNumber, table.tableNumber));
 
-    if (existing[0]) {
-      created.push({ tableNumber: table.tableNumber, url: qrUrlFor(baseUrl, existing[0].qrToken) });
-      continue;
+    if (!existing[0]) {
+      await db.insert(restaurantTables).values({ ...table, qrToken: generateQrToken() });
     }
-
-    const token = generateQrToken();
-    await db.insert(restaurantTables).values({ ...table, qrToken: token });
-    created.push({ tableNumber: table.tableNumber, url: qrUrlFor(baseUrl, token) });
+    created.push({ tableNumber: table.tableNumber, url: tableUrl(baseUrl, table.tableNumber) });
   }
 
   return created;
-}
-
-async function seedWaiter(db: AppDatabase): Promise<boolean> {
-  const existing = await db
-    .select()
-    .from(users)
-    .where(sql`lower(${users.email}) = ${DEMO_WAITER.email}`);
-  if (existing[0]) return false;
-
-  await db.insert(users).values({
-    email: DEMO_WAITER.email,
-    displayName: DEMO_WAITER.displayName,
-    passwordHash: await hashPassword(DEMO_WAITER.password),
-    role: 'WAITER',
-  });
-  return true;
 }
 
 async function main(): Promise<void> {
@@ -176,7 +149,7 @@ async function main(): Promise<void> {
   if (url && !process.env.SEED_ALLOW_PROD) {
     console.error(
       '\nRefusing to seed DEMO data into the database at DATABASE_URL.\n' +
-        'This creates a test waiter account with a known password.\n' +
+        'This adds three DEMO tables beside the real ones.\n' +
         'Set SEED_ALLOW_PROD=1 if this really is a demo or staging database.\n',
     );
     process.exitCode = 1;
@@ -205,16 +178,13 @@ async function main(): Promise<void> {
   const itemCount = await seedMenu(db);
   const saturday = RESTAURANT.saturdayMenu ? await provisionSaturdayMenu(db) : { itemsApplied: 0 };
   const tables = await seedTables(db, baseUrl);
-  const waiterCreated = await seedWaiter(db);
 
   console.log('\nSeed complete');
   console.log('=============');
   console.log(`Menu items      : ${itemCount}`);
   console.log(`Saturday dishes : ${saturday.itemsApplied}`);
   console.log(`Demo tables     : ${tables.length}`);
-  console.log(`Waiter account  : ${waiterCreated ? 'created' : 'already existed'}`);
-  console.log(`\n  ${DEMO_WAITER.email} / ${DEMO_WAITER.password}   (DEMO ONLY)\n`);
-  console.log('Table QR links (open on a phone, or generate printable codes with `npm run qr`):');
+  console.log('\nTable links (open on a phone; print the cards with `npm run qr`):');
   for (const table of tables) console.log(`  Table ${table.tableNumber}  ${table.url}`);
   console.log('');
 

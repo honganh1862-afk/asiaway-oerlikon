@@ -31,11 +31,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://asiaway:${POSTGRES_PASSWORD:-change-me-in-env}@db:5432/asiaway
-      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
-      CUSTOMER_COOKIE_SECRET: ${CUSTOMER_COOKIE_SECRET:?CUSTOMER_COOKIE_SECRET is required}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
       NEXT_PUBLIC_RESTAURANT_TIMEZONE: ${NEXT_PUBLIC_RESTAURANT_TIMEZONE:-Europe/Zurich}
-      SESSION_IDLE_TIMEOUT_HOURS: ${SESSION_IDLE_TIMEOUT_HOURS:-4}
     ports:
       - '3000:3000'
 

@@ -25,18 +25,18 @@ describe('which restaurant a deployment serves', () => {
     expect(RESTAURANT_PROFILES.winterthur.saturdayMenu).toBe(false);
   });
 
-  it('takes payment at the counter and lets guests call staff in Winterthur only', () => {
-    expect(RESTAURANT_PROFILES.winterthur).toMatchObject({ payment: 'counter', guestCallsStaff: true });
-    expect(RESTAURANT_PROFILES.oerlikon).toMatchObject({ payment: 'table', guestCallsStaff: false });
+  it('has guests pay at the counter in both, and says where only in Winterthur', () => {
+    expect(RESTAURANT_PROFILES.winterthur).toMatchObject({ payment: 'counter', counterPlace: 'stairs' });
+    expect(RESTAURANT_PROFILES.oerlikon).toMatchObject({ payment: 'counter', counterPlace: null });
   });
 
-  it('sends waiter-taken orders to the POS queue in Winterthur only', () => {
-    expect(RESTAURANT_PROFILES.winterthur.queueWaiterOrders).toBe(true);
-    expect(RESTAURANT_PROFILES.oerlikon.queueWaiterOrders).toBe(false);
+  it('serves the Thai menu in Winterthur only', () => {
+    expect(RESTAURANT_PROFILES.winterthur.thaiMenu).toBe(true);
+    expect(RESTAURANT_PROFILES.oerlikon.thaiMenu).toBe(false);
   });
 
-  it('asks for Google reviews of Winterthur only, which is the listing it links to', () => {
-    expect(RESTAURANT_PROFILES.winterthur.reviewUrl).toMatch(/^https:\/\/maps\.app\.goo\.gl\//);
-    expect(RESTAURANT_PROFILES.oerlikon.reviewUrl).toBeNull();
+  it('asks for Google reviews of each restaurant on its own listing', () => {
+    expect(RESTAURANT_PROFILES.winterthur.reviewUrl).toBe('https://maps.app.goo.gl/2zNqQCJNHLKMi4WA8');
+    expect(RESTAURANT_PROFILES.oerlikon.reviewUrl).toBe('https://maps.app.goo.gl/nFY8toA4d164p12q7');
   });
 });

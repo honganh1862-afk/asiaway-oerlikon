@@ -13,23 +13,18 @@ for the restaurant. Fly.io, Railway, Hetzner with Coolify, or any VPS all work.
 
 ## Deploying to Vercel (free tier)
 
-Vercel is serverless, which this app tolerates but is not built for. It works,
-with one trade-off and three required settings.
-
-**The trade-off:** alerts arrive within ~20 seconds instead of instantly. Each
-invocation is its own process, so an order submitted by one cannot reach an SSE
-stream held by another. The waiter client reconciles against the notification
-queue on a timer regardless, so nothing is ever lost — only delayed.
+Each restaurant is a Vercel project of its own, built from the same code:
+`asiaway-oerlikon.vercel.app` and `asiaway-winterthur.vercel.app`. The site is
+a menu with no live parts, which serverless suits.
 
 **Required settings**, beyond the usual variables:
 
 | Variable | Value | Why |
 |---|---|---|
-| `NEXT_PUBLIC_DISABLE_SSE` | `1` | Skips a stream that cannot deliver and would burn an invocation on every reconnect |
-| `CRON_SECRET` | `openssl rand -base64 32` | **Without it the idle-session cleanup refuses every request and silently never runs** |
+| `CRON_SECRET` | `openssl rand -base64 32` | Protects `/api/admin/setup` |
 | `DATABASE_URL` | the **pooled** connection string | See below |
 
-`vercel.json` pins the region to `fra1` and schedules the cleanup hourly.
+`vercel.json` pins the region to `fra1`.
 
 **Pooled connections.** Neon, Supabase and friends put PgBouncer in front of
 Postgres in transaction mode, where prepared statements break — usually as a
@@ -37,10 +32,6 @@ baffling error once traffic picks up, not immediately. `createPostgresDatabase`
 detects a pooled URL and disables prepared statements, and drops to one
 connection per instance on serverless. Use the **pooled** string, not the direct
 one.
-
-**Before real service**, move to a small always-on host (~EUR 5/month). Instant
-alerts come back with no code change: drop `NEXT_PUBLIC_DISABLE_SSE` and run the
-same Docker image.
 
 ## Environments
 
@@ -57,12 +48,10 @@ Copy `.env.example`. Generate each secret with `openssl rand -base64 48`.
 | Name | Required | Notes |
 |---|---|---|
 | `DATABASE_URL` | production | Without it the app refuses to start in production |
-| `CUSTOMER_COOKIE_SECRET` | production | Signs the guest session cookie; min 32 chars. Changing it logs out every guest |
-| `AUTH_SECRET` | production | Reserved for the auth layer |
-| `APP_BASE_URL` | yes | Public HTTPS address; **the QR codes encode it** |
-| `NEXT_PUBLIC_RESTAURANT_LOCATION` | no | `oerlikon` (default) or `winterthur`. Picks the floor plan and the Saturday menu. Read at **build** time |
+| `CRON_SECRET` | yes | Protects `/api/admin/setup`; without it the endpoint refuses everything |
+| `APP_BASE_URL` | no | Public HTTPS address. `npm run qr` defaults to each restaurant's Vercel address |
+| `NEXT_PUBLIC_RESTAURANT_LOCATION` | no | `oerlikon` (default) or `winterthur`. Picks the Thai menu, the Saturday menu and how guests pay. Read at **build** time |
 | `NEXT_PUBLIC_RESTAURANT_TIMEZONE` | no | Default `Europe/Zurich` (confirm — open question E8) |
-| `SESSION_IDLE_TIMEOUT_HOURS` | no | Default `4` (proposal E6) |
 | `SEED_ALLOW_PROD` | no | Guard; the demo seed refuses a real database without it |
 
 Secrets come from the host's secret store. Never commit a filled-in `.env`.
@@ -79,11 +68,8 @@ DATABASE_URL=postgres://... npm run db:migrate
 DATABASE_URL=postgres://... npm run menu:import
 ```
 
-Then create the real staff accounts — **not** the demo ones:
-
-```bash
-DATABASE_URL=postgres://... npm run user:create -- --email anna@asiaway.ch --name "Anna" --password '<generated>'
-```
+There are no staff accounts: guests read the menu, the waiter takes the order
+at the table and keys it into the POS, and guests pay at the counter.
 
 ### Tighten the database privileges
 
@@ -103,25 +89,34 @@ only. **This layer cannot be verified locally** (the local PGlite database runs
 single-user) — verify it on staging by confirming that an `UPDATE` on
 `audit_events` as `asiaway_app` is refused.
 
-## Tables and QR codes
+## Table cards
 
-Real QR codes are generated only once the restaurant supplies its actual table
-list — nothing about the tables is invented.
+Each table gets a fold-over card whose QR code opens the menu and tells it the
+table number (`https://<address>/table/<number>`). The tables come from
+`data/oerlikon-tables.json` and `data/winterthur-tables.json`; no database is
+needed.
 
 ```bash
-DATABASE_URL=postgres://... APP_BASE_URL=https://your-domain npm run qr
+npm run qr -- winterthur
+```
+```bash
+npm run qr -- oerlikon
 ```
 
-This writes `qr-codes/table-XX.svg`, `.png` and a printable `print-sheet.html`.
-**`APP_BASE_URL` is baked into every code**, so set it correctly before printing:
-reprinting means revisiting every table.
+Each writes `qr-codes/<restaurant>/`: the cards on A4, two per page, as HTML and
+(when Google Chrome is installed) PDF, dark and light; and each table's code on
+its own as SVG and PNG. **The address is printed into every code**, so check it
+in the output before printing: reprinting means revisiting every table.
+
+Cards printed before October 2026 carry a random code per table (`/t/<code>`)
+instead of the number. They keep working: the code is looked up in
+`restaurant_tables`, which is why provisioning never changes a table's code.
 
 ## A second restaurant: Winterthur
 
 Winterthur runs the same code as Oerlikon as a deployment of its own: its own
-database, its own address, its own QR codes and staff accounts. Nothing is
-shared while it runs — orders, sold-out marks and bills in one restaurant never
-appear in the other. A push to `main` redeploys both.
+database, its own address and its own table cards. Nothing is shared while it
+runs. A push to `main` redeploys both.
 
 What differs is kept in two files: `src/config/restaurant.ts` (Winterthur has
 no Saturday menu) and `src/config/floor-plan.ts` (its room, and which tables
@@ -137,9 +132,7 @@ files in `data/` as Oerlikon's.
    |---|---|
    | `NEXT_PUBLIC_RESTAURANT_LOCATION` | `winterthur` |
    | `DATABASE_URL` | Winterthur's **pooled** connection string |
-   | `APP_BASE_URL` | Winterthur's public address — the QR codes encode it |
-   | `CUSTOMER_COOKIE_SECRET`, `AUTH_SECRET`, `CRON_SECRET` | Newly generated. Never reuse Oerlikon's |
-   | `NEXT_PUBLIC_DISABLE_SSE` | `1` |
+   | `CRON_SECRET` | Newly generated. Never reuse Oerlikon's |
 
 4. **Provision it** — schema, menu and Winterthur's 45 tables in one call:
 
@@ -147,12 +140,9 @@ files in `data/` as Oerlikon's.
    curl -X POST "https://WINTERTHUR-ADDRESS/api/admin/setup" -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/json" --data @data/winterthur-tables.json
    ```
 
-   The response lists each table with its QR link. It reports
+   The response lists each table with its card link. It reports
    `"saturdayItems": 0`, which is correct for Winterthur.
-5. **Staff accounts**, as in [First deployment](#first-deployment), with
-   `DATABASE_URL` set to Winterthur's database.
-6. **QR codes**, as in [Tables and QR codes](#tables-and-qr-codes), with
-   Winterthur's `DATABASE_URL` and `APP_BASE_URL`.
+5. **Table cards**, as in [Table cards](#table-cards).
 
 Changing `NEXT_PUBLIC_RESTAURANT_LOCATION` later needs a redeploy, not just a
 restart: it is built into the pages.
@@ -165,36 +155,8 @@ restart: it is built into the pages.
 4. Check `/api/health` — it returns 503 if the database is unreachable, so a
    broken instance is never given traffic.
 
-## Reverse proxy
-
-SSE needs buffering turned off, or alerts arrive in batches:
-
-```nginx
-location /api/waiter/stream {
-    proxy_pass http://app:3000;
-    proxy_buffering off;
-    proxy_cache off;
-    proxy_read_timeout 3600s;
-    proxy_set_header Connection '';
-    proxy_http_version 1.1;
-}
-```
-
-Without this the app still works — the client falls back to polling and shows
-"Delayed" — but live alerts are the point.
-
 ## Backups
 
 Daily `pg_dump` plus point-in-time recovery, retained at least 30 days.
 
-**Rehearse a restore before go-live.** An untested backup is not a backup, and
-this database holds the order history the restaurant would need in a dispute.
-
-## Scaling note
-
-Phase 1 is one container, which is ample for one restaurant. Two things are
-in-process and would need moving before running several instances: the SSE
-notification hub (bridge it to Postgres `LISTEN/NOTIFY` — `publishWaiterEvent`
-is the single seam) and the rate limiter (move to shared storage). Correctness
-does not depend on either: the notification queue and every guarantee live in
-the database.
+**Rehearse a restore before go-live.** An untested backup is not a backup.

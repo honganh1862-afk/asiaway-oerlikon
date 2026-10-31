@@ -11,7 +11,7 @@ import {
   saveWeeklySpecial,
 } from '../../src/server/services/specials-service';
 import { getMenu } from '../../src/server/services/menu-service';
-import type { Db } from '../../src/server/services/order-service';
+import type { AppDatabase as Db } from '../../src/server/db/client';
 import type { AppDatabase } from '../../src/server/db/client';
 
 let ctx: TestContext;

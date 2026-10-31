@@ -11,7 +11,6 @@ import {
   menuCategories,
   menuItems,
   restaurantTables,
-  users,
 } from '../../../../server/db/schema';
 import { loadFoodMenus } from '../../../../server/menu/food-menus';
 import { parseDrinksCsv } from '../../../../server/menu/drinks-import';
@@ -20,7 +19,7 @@ import { provisionSaturdayMenu } from '../../../../server/menu/provision-saturda
 import { RESTAURANT } from '../../../../config/restaurant';
 import { ALLERGENS } from '../../../../domain/menu/allergens';
 import { generateQrToken } from '../../../../domain/session/qr-token';
-import { hashPassword } from '../../../../server/auth/password';
+import { tableUrl } from '../../../../domain/table';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +27,7 @@ export const maxDuration = 60;
 
 /**
  * One-time provisioning for a fresh deployment: create the schema, load the
- * menu, add the tables and the first staff account.
+ * menu and add the tables.
  *
  * Why this exists: a managed database hands its credentials to the deployment,
  * not to a laptop. Without this, standing up a new environment means someone
@@ -38,11 +37,10 @@ export const maxDuration = 60;
  *
  * It is protected by CRON_SECRET, refuses every request when that is unset, and
  * is idempotent: migrations are tracked in a ledger, the menu import matches on
- * stable keys, and tables and the account are created only if absent. Running it
- * twice changes nothing.
+ * stable keys, and tables are created only if absent. Running it twice changes
+ * nothing.
  *
- * It never drops anything, never resets availability a waiter has set, and
- * never returns a credential.
+ * It never drops anything and never resets a dish marked sold out.
  */
 const Body = z.object({
   tables: z
@@ -54,21 +52,12 @@ const Body = z.object({
     )
     .max(200)
     .optional(),
-  user: z
-    .object({
-      email: z.string().email().max(255),
-      name: z.string().min(1).max(100),
-      password: z.string().min(8).max(200),
-    })
-    .optional(),
   baseUrl: z.string().url().optional(),
   /**
    * Retire any active table NOT in `tables`. Opt-in, because a partial list
    * would otherwise take real tables out of service.
    */
   deactivateMissing: z.boolean().optional(),
-  /** Exercise the sign-in path and report the real error. Diagnostic only. */
-  selfTest: z.boolean().optional(),
 });
 
 function authorised(request: Request): boolean {
@@ -94,52 +83,6 @@ export async function POST(request: Request) {
   try {
     const body = Body.parse(await request.json().catch(() => ({})));
     const { db: database, executeMultiple } = await getDatabase();
-
-    // Diagnostic: the sign-in route deliberately returns a generic message, so
-    // a server fault there is indistinguishable from a wrong password. This
-    // runs the same path and reports what actually broke, behind the same
-    // authentication as the rest of this endpoint.
-    if (body.selfTest) {
-      const steps: Record<string, string> = {};
-      const attempt = async (name: string, fn: () => Promise<unknown>) => {
-        try {
-          const value = await fn();
-          steps[name] = `ok: ${JSON.stringify(value)?.slice(0, 200)}`;
-        } catch (e) {
-          steps[name] = `FAILED: ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`;
-        }
-      };
-
-      await attempt('countUsers', async () => {
-        const r = await database.select({ n: sql<number>`count(*)::int` }).from(users);
-        return r[0]?.n;
-      });
-      await attempt('findUserByEmail', async () => {
-        const r = await database
-          .select({ email: users.email })
-          .from(users)
-          .where(sql`lower(${users.email}) = ${'1@1.ch'}`);
-        return r[0]?.email ?? null;
-      });
-      await attempt('loginAttemptsQuery', async () => {
-        const { signIn } = await import('../../../../server/auth/session');
-        try {
-          await signIn(database, { email: 'probe@nowhere.test', password: 'x'.repeat(12) });
-          return 'unexpectedly signed in';
-        } catch (e) {
-          // An AuthError here is the CORRECT outcome; anything else is the bug.
-          return `${e instanceof Error ? e.name : typeof e}: ${
-            e instanceof Error ? e.message : String(e)
-          }`;
-        }
-      });
-      await attempt('hashPassword', async () => {
-        const h = await hashPassword('probe-password-1234');
-        return h.slice(0, 16);
-      });
-
-      return NextResponse.json({ selfTest: steps });
-    }
 
     // --- schema ----------------------------------------------------------
     const migrations = await runMigrations(database, executeMultiple);
@@ -246,8 +189,9 @@ export async function POST(request: Request) {
         .from(restaurantTables)
         .where(eq(restaurantTables.tableNumber, table.tableNumber));
 
-      // An existing table KEEPS its token: rotating it would silently invalidate
-      // a QR code already printed and glued to that table.
+      // An existing table KEEPS its token: the first table cards carried it,
+      // and rotating it would silently break a card already glued to a table.
+      // New cards carry the table number instead (see tableUrl).
       const token = existing[0]?.qrToken ?? generateQrToken();
 
       if (!existing[0]) {
@@ -267,7 +211,7 @@ export async function POST(request: Request) {
       createdTables.push({
         tableNumber: table.tableNumber,
         area: table.area ?? existing[0]?.area ?? null,
-        url: `${base}/t/${token}`,
+        url: tableUrl(base, table.tableNumber),
       });
     }
 
@@ -288,25 +232,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // --- first staff account ---------------------------------------------
-    let userCreated = false;
-    if (body.user) {
-      const existing = await database
-        .select()
-        .from(users)
-        .where(sql`lower(${users.email}) = ${body.user.email.toLowerCase()}`);
-
-      if (!existing[0]) {
-        await database.insert(users).values({
-          email: body.user.email,
-          displayName: body.user.name,
-          passwordHash: await hashPassword(body.user.password),
-          role: 'WAITER',
-        });
-        userCreated = true;
-      }
-    }
-
     const [counts] = await database
       .select({ n: sql<number>`count(*)::int` })
       .from(menuItems)
@@ -320,7 +245,6 @@ export async function POST(request: Request) {
       saturdayItems: saturday.itemsApplied,
       tables: createdTables,
       deactivated,
-      userCreated,
       // Reported so that "no photos configured" and "the manifest never
       // reached this function" stop looking identical. A silent zero here sent
       // me hunting once already.

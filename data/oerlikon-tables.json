@@ -1,0 +1,26 @@
+{
+  "tables": [
+    { "tableNumber": "4", "area": "INSIDE" },
+    { "tableNumber": "9", "area": "INSIDE" },
+    { "tableNumber": "10", "area": "INSIDE" },
+    { "tableNumber": "11", "area": "INSIDE" },
+    { "tableNumber": "12", "area": "INSIDE" },
+    { "tableNumber": "13", "area": "INSIDE" },
+    { "tableNumber": "14", "area": "INSIDE" },
+    { "tableNumber": "15", "area": "INSIDE" },
+    { "tableNumber": "16", "area": "INSIDE" },
+    { "tableNumber": "17", "area": "INSIDE" },
+    { "tableNumber": "18", "area": "INSIDE" },
+    { "tableNumber": "19", "area": "INSIDE" },
+    { "tableNumber": "20", "area": "INSIDE" },
+    { "tableNumber": "21", "area": "INSIDE" },
+    { "tableNumber": "22", "area": "INSIDE" },
+    { "tableNumber": "30", "area": "OUTSIDE" },
+    { "tableNumber": "31", "area": "OUTSIDE" },
+    { "tableNumber": "32", "area": "OUTSIDE" },
+    { "tableNumber": "50", "area": "INSIDE" },
+    { "tableNumber": "51", "area": "INSIDE" },
+    { "tableNumber": "52", "area": "INSIDE" },
+    { "tableNumber": "53", "area": "INSIDE" }
+  ]
+}

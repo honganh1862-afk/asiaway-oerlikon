@@ -4,7 +4,7 @@ import { domainError } from '../../domain/errors';
 import { isSaturdayDate, restaurantDate } from '../../domain/menu/saturday';
 import { auditEvents, menuItems, weeklySpecials } from '../db/schema';
 import { SATURDAY_SPECIAL_KEY } from '../menu/saturday-menu';
-import type { Db } from './order-service';
+import type { AppDatabase as Db } from '../db/client';
 
 /**
  * Photographs go into the database, so a size limit is a real constraint rather

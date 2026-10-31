@@ -1,127 +1,57 @@
 # API reference
 
-REST over HTTPS, JSON. Two authorisation worlds, deliberately separated.
-
-## Authentication
-
-| Surface | Mechanism |
-|---|---|
-| Guest | `aw_dsid` cookie — httpOnly, Secure, SameSite=Lax, HMAC-signed, carrying `{sessionId, tableId, deviceId}`. Issued **only** by scanning a QR. No login, no personal data. |
-| Waiter | `aw_wsid` cookie — httpOnly, Secure, SameSite=Strict, an opaque token stored only as a SHA-256 hash. 12-hour expiry. |
-
-**The QR token buys exactly one thing**: the right to start or join the session
-at that table. Every later call authorises against the cookie, never against an
-identifier in the request body. That is what prevents one table reading or
-changing another's orders.
+REST over HTTPS, JSON. There are no accounts and no sign-in: everything a guest
+uses is public, and the one write endpoint, provisioning, is protected by
+`CRON_SECRET`.
 
 ## Errors
 
 ```json
-{ "error": { "code": "ITEMS_UNAVAILABLE", "message": "...", "details": { } } }
+{ "error": { "code": "VALIDATION_FAILED", "message": "...", "details": { } } }
 ```
 
 | Code | Status | Meaning |
 |---|---|---|
-| `QR_INVALID` | 404 | Unknown, retired or malformed code. Says nothing about real tables |
-| `SESSION_NOT_FOUND` | 404 | No guest session — scan again |
-| `SESSION_CLOSED` | 409 | Staff closed the session |
-| `ITEMS_UNAVAILABLE` | 409 | Sold out; `details.items` names them |
-| `REVISION_CONFLICT` | 409 | Another device edited the order first |
-| `REQUEST_IN_FLIGHT` | 409 | An identical submission is already being processed |
-| `SESSION_HAS_UNRESOLVED_ORDERS` | 409 | Close needs `force` plus a reason |
-| `ORDER_NOT_EDITABLE` | 409 | Order already confirmed or cancelled |
-| `EMPTY_CART`, `INVALID_QUANTITY`, `NOTE_TOO_LONG`, `VALIDATION_FAILED` | 400 | Input rejected |
-| `UNAUTHENTICATED` / `FORBIDDEN` | 401 / 403 | Sign in / not allowed |
-| `RATE_LIMITED` | 429 | Too many requests |
+| `VALIDATION_FAILED` | 400 | Input rejected, or no such dish |
+| `UNAUTHENTICATED` | 401 | Provisioning without the right `CRON_SECRET` |
 | `INTERNAL_ERROR` | 500 | Generic. Never carries a stack trace or SQL |
 
 ---
 
-## Guest endpoints
+## Table links
+
+### `GET /table/{number}`
+
+The link on a table card. Remembers the table in the `aw_table` cookie (readable
+by the page, six hours, never trusted for anything) and redirects to `/menu`. A
+value that is not a table number is not remembered; the menu opens anyway.
 
 ### `GET /t/{qrToken}`
-Resolves the code, opens or joins the table session, sets `aw_dsid`, redirects to
-`/menu`. An unknown code redirects to `/qr-invalid`. Rate limited per IP.
+
+The link on the first table cards, which carried a random code per table. The
+code is looked up in `restaurant_tables`, the table remembered as above, and the
+guest sent to `/menu`; an unknown or retired code goes to `/qr-invalid`, which
+says nothing about which tables exist.
+
+## Menu
 
 ### `GET /api/menu?lang=en|de|vi`
-Categories and items, localised, grouped by `kind` (`FOOD` / `DRINK`).
-Sold-out items **are included**, flagged `isAvailable: false` — the guest must
-still see the dish. `imagePath` is `null` when no photograph exists; the UI then
-renders no image element at all.
+
+The whole menu in one language: categories with their dishes, prices in Rappen,
+allergen codes, photo paths, sold-out marks, and each dish's Vietnamese name.
+Dishes served only on certain days are left out on the others.
 
 ### `GET /api/menu/items/{id}?lang=` · `GET /api/allergens?lang=`
-One item's detail; the 14-code allergen legend.
 
-### `POST /api/orders`
-Header **`Idempotency-Key`** required (8–128 chars, reused across retries).
+One dish with its category name; the allergen legend.
 
-```json
-{ "items": [{ "menuItemId": "uuid", "quantity": 2 }], "note": "No coriander, please." }
-```
+### `GET /api/menu/specials/{date}/image`
 
-No price, total, table or order number is accepted — all four are server-owned.
-Inside one transaction the server validates the session, re-checks availability,
-reads every price from the database, allocates the order number from a Postgres
-sequence, writes revision 0, the audit event and the waiter notification.
+The photo of that Saturday's special, where one is set.
 
-Returns `201` (or `200` with `replayed: true` for a repeat of the same key):
-
-```json
-{ "orderNumber": 1047, "totalCents": 7450, "submittedAt": "...", "replayed": false }
-```
-
-### `GET /api/orders`
-This session's orders, current version, with `wasAdjustedByStaff`. Internal
-workflow statuses are mapped to `RECEIVED` / `CONFIRMED` / `CANCELLED` before
-leaving the server.
-
-### `POST /api/checkout-request`
-Asks for the bill. Idempotent: a second press returns the original
-`requestedAt` and creates no second alert. **The session stays open** — only
-staff close it, after payment at the POS.
-
-### `GET /api/session`
-`{ active, tableNumber, checkoutRequestedAt, orderCount, sessionTotalCents }`,
-or `{ active: false, reason }` once closed.
-
----
-
-## Waiter endpoints
-
-All require authentication, re-checked in every handler, plus a same-origin
-check on mutations.
+## Operations
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/waiter/auth/signin` | Argon2id; identical error for wrong email and wrong password; lockout after 5 failures in 15 min |
-| `POST` | `/api/waiter/auth/signout` | Revokes the session |
-| `GET` | `/api/waiter/dashboard` | Table grid with derived states, plus alert counts |
-| `GET` | `/api/waiter/orders` | Pending queue, oldest first |
-| `GET` | `/api/waiter/orders/{id}` | Full order **including `originalSubmission` and the revision history** |
-| `POST` | `/api/waiter/orders/{id}/open` | → `EMPLOYEE_REVIEW`; audited, creates no revision |
-| `PATCH` | `/api/waiter/orders/{id}` | Edit. Needs `expectedRevisionNumber`; creates a revision with full before/after snapshots and one audit event per change |
-| `POST` | `/api/waiter/orders/{id}/confirm` | → `CONFIRMED`, writes `FINAL_CONFIRMED`, acknowledges the alert, releases the session if nothing else waits |
-| `GET` | `/api/waiter/menu-items` | Availability list |
-| `POST` | `/api/waiter/menu-items/{id}/availability` | Sold-out toggle; instant, audited, no deploy |
-| `GET` | `/api/waiter/sessions/{id}` | Every order in the session and its total |
-| `POST` | `/api/waiter/sessions/{id}/close` | After POS payment. Refuses on unresolved orders unless `{force, reason}` |
-| `GET` | `/api/waiter/notifications` | **The authoritative pending queue** |
-| `POST` | `/api/waiter/notifications/{id}/ack` | Acknowledge |
-| `GET` | `/api/waiter/stream` | SSE: `new_order`, `checkout_requested`, `order_updated`, `availability_changed`, heartbeat |
-| `GET` | `/api/waiter/audit?sessionId=\|orderId=\|tableId=` | Ordered audit events |
-| `GET` | `/api/health` | DB-backed health check (no auth) |
-
-### On the SSE stream
-It is an accelerator, not the source of truth. Clients reconcile against
-`/api/waiter/notifications` on every connect and reconnect, and fall back to
-polling every 10 seconds after three failures. A dropped stream costs latency,
-never an order.
-
----
-
-## Phase 2 seams
-
-`src/domain/ports/` defines `PosAdapter`, `KitchenRouter`, `PaymentProvider` and
-`AnalyticsSink`. Each has one no-op Phase 1 implementation and **names no
-vendor**. A real integration is a new implementation, not a change to the
-ordering domain.
+| `POST` | `/api/admin/setup` | `Authorization: Bearer $CRON_SECRET`. Creates the schema, loads the menu and the tables in the body (`data/<restaurant>-tables.json`), and returns each table's card link. Idempotent |
+| `GET` | `/api/health` | Database-backed health check |

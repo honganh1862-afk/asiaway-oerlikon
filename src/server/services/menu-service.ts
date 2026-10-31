@@ -10,7 +10,7 @@ import {
 } from '../../domain/menu/saturday';
 import { SATURDAY_SPECIAL_KEY } from '../menu/saturday-menu';
 import { getSpecialForDate } from './specials-service';
-import type { Db } from './order-service';
+import type { AppDatabase as Db } from '../db/client';
 
 export interface LocalisedMenuItem {
   readonly id: string;

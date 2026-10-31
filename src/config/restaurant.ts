@@ -3,10 +3,11 @@
  *
  * Each restaurant is its own deployment — its own database, its own address,
  * its own QR codes — built from the same code, so a fix reaches both. What
- * differs between them lives here and in the floor plan, and nowhere else.
+ * differs between them lives here and in its table list (data/), and nowhere
+ * else.
  *
  * It is read from NEXT_PUBLIC_RESTAURANT_LOCATION at BUILD time, because the
- * waiter's browser needs it as much as the server does. Changing it means a
+ * guest's browser needs it as much as the server does. Changing it means a
  * rebuild, not just a restart.
  */
 export const RESTAURANT_LOCATIONS = ['oerlikon', 'winterthur'] as const;
@@ -19,19 +20,12 @@ export interface RestaurantProfile {
    */
   readonly saturdayMenu: boolean;
   /**
-   * Whether an order a waiter takes on their phone goes to the queue, with the
-   * alert, for whoever enters orders into the POS. In Winterthur one person at
-   * the iPad enters every order; in Oerlikon the waiter who took it does.
-   */
-  readonly queueWaiterOrders: boolean;
-  /**
-   * Where guests pay. "table": they ask for the bill and staff bring it over.
-   * "counter": they pay, and get the bill, at Winterthur's counter in front of
-   * the stairs, so there is no bill to ask for.
+   * Where guests pay. "counter": they pay, and get the bill, at the counter
+   * when they have finished. "table": they ask their waiter for the bill.
    */
   readonly payment: 'table' | 'counter';
-  /** Whether guests can call a member of staff to their table from their phone. */
-  readonly guestCallsStaff: boolean;
+  /** Where the counter is, when the room needs it said: Winterthur's is in front of the stairs. */
+  readonly counterPlace: 'stairs' | null;
   /**
    * Whether the Thai menu is served beside the Vietnamese one. Winterthur has
    * both, each on its own tab; Oerlikon has the Vietnamese menu only.
@@ -48,17 +42,16 @@ export interface RestaurantProfile {
 export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, RestaurantProfile>> = {
   oerlikon: {
     saturdayMenu: true,
-    queueWaiterOrders: false,
-    payment: 'table',
-    guestCallsStaff: false,
+    payment: 'counter',
+    counterPlace: null,
     thaiMenu: false,
-    reviewUrl: null,
+    // "Asiaway" in Zürich-Oerlikon on Google Maps.
+    reviewUrl: 'https://maps.app.goo.gl/nFY8toA4d164p12q7',
   },
   winterthur: {
     saturdayMenu: false,
-    queueWaiterOrders: true,
     payment: 'counter',
-    guestCallsStaff: true,
+    counterPlace: 'stairs',
     thaiMenu: true,
     // "Asiaway Restaurant Winterthur" on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/2zNqQCJNHLKMi4WA8',
@@ -68,7 +61,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
 /**
  * Unset means Oerlikon, so the deployment that existed before Winterthur keeps
  * working with no change. A misspelt value fails loudly rather than quietly
- * showing waiters the wrong room.
+ * showing guests the wrong restaurant's menu.
  */
 export function resolveLocation(value: string | undefined): RestaurantLocation {
   const key = (value ?? '').trim().toLowerCase();
