@@ -8,66 +8,76 @@ import { LOCALE_LABELS, LOCALES, type Locale } from '../../i18n/locales';
 import { formatMoney } from '../../lib/format';
 
 /**
- * The guest shell: a compact header with the table and language, and a bottom
- * bar within thumb reach.
+ * The guest shell: a compact header with the table and language, and the cart
+ * within thumb reach at the bottom.
  *
  * Designed for one-handed use on a phone — every target is at least 44px, and
- * the cart is reachable from every screen without scrolling.
+ * the cart is reachable from every menu screen without scrolling.
+ *
+ * The classic menu is a book that fills the screen and turns its own pages, so
+ * there the frame is exactly one screen tall and the cart bar sits in the flow
+ * under it rather than floating over a page.
  */
 export function Shell({ children }: { children: ReactNode }) {
   const { t, locale, setLocale, cartCount, cartTotalCents } = useCustomer();
   const pathname = usePathname();
   const [table, setTable] = useState<string | null>(null);
-  const [sessionClosed, setSessionClosed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/session')
       .then((r) => r.json())
       .then((data) => {
-        if (cancelled) return;
-        if (data.active) setTable(data.tableNumber);
-        else if (data.reason === 'SESSION_CLOSED') setSessionClosed(true);
+        if (!cancelled && data.active) setTable(data.tableNumber);
       })
       .catch(() => {
-        // The header degrades to no table label; the page still works.
+        // The header degrades to no table label; the menu still works.
       });
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
 
-  if (sessionClosed) {
-    return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-4 text-center">
-        <h1 className="text-xl font-semibold">{t('session.closed.title')}</h1>
-        <p className="text-ink-muted">{t('session.closed.body')}</p>
-      </main>
-    );
-  }
+  const immersive = pathname === '/menu/classic';
+  // Not on the cart itself, nor once the guest is paying, and not on a dish's
+  // own page: its add bar sits in the same place, and the cart bar would cover
+  // the very button the guest came to press.
+  const showCartBar =
+    cartCount > 0 &&
+    pathname !== '/cart' &&
+    pathname !== '/pay' &&
+    !(pathname.startsWith('/menu/') && !['/menu/classic', '/menu/modern'].includes(pathname));
 
-  const tabs = [
-    { href: '/menu', label: t('nav.menu'), icon: ICONS.menu },
-    { href: '/orders', label: t('nav.orders'), icon: ICONS.orders },
-    { href: '/checkout', label: t('nav.bill'), icon: ICONS.bill },
-  ];
+  const cartBar = showCartBar && (
+    <Link href="/cart" className="btn-primary flex w-full items-center justify-between shadow-lg">
+      <span className="flex items-center gap-2">
+        {CART_ICON}
+        {t('nav.cart')} · {cartCount}
+      </span>
+      <span>{formatMoney(cartTotalCents)}</span>
+    </Link>
+  );
 
   return (
-    <div className="guest-frame mx-auto flex min-h-screen max-w-md flex-col">
+    <div
+      className={`guest-frame mx-auto flex max-w-md flex-col ${
+        immersive ? 'h-[100dvh] overflow-hidden bg-book-table' : 'min-h-screen'
+      }`}
+    >
       <header
-        className="sticky top-0 z-30 border-b border-ink/10 bg-surface/95 px-4 backdrop-blur"
+        className="sticky top-0 z-30 shrink-0 border-b border-ink/10 bg-surface/95 px-4 backdrop-blur"
         style={{ height: 'var(--guest-header)', paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex h-full items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+          <Link href="/menu" className="flex min-h-tap min-w-0 items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/asiaway-logo.png" alt={t('app.name')} className="h-7 w-auto" />
             {table && (
-              <p className="truncate text-sm font-medium text-ink-muted">
+              <span className="truncate text-sm font-medium text-ink-muted">
                 {t('table.label', { table })}
-              </p>
+              </span>
             )}
-          </div>
+          </Link>
           <label className="sr-only" htmlFor="lang">
             {t('lang.choose')}
           </label>
@@ -86,57 +96,39 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main
-        className="flex-1 px-4 pt-4"
-        style={{ paddingBottom: 'calc(10rem + env(safe-area-inset-bottom))' }}
-      >
-        {children}
-      </main>
-
-      {/* Not on a dish's own page: its add bar sits in the same place, and the
-          cart bar would cover the very button the guest came to press. */}
-      {cartCount > 0 && pathname !== '/cart' && !pathname.startsWith('/menu/') && (
-        <div className="fixed inset-x-0 bottom-[var(--guest-nav)] z-20 mx-auto max-w-md px-4 pb-2">
-          <Link
-            href="/cart"
-            className="btn-primary flex w-full items-center justify-between shadow-lg"
+      {immersive ? (
+        <>
+          <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+          {cartBar && (
+            <div className="shrink-0 px-4 pt-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+              {cartBar}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <main
+            className="flex-1 px-4 pt-4"
+            style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}
           >
-            <span>
-              {t('nav.cart')} · {cartCount}
-            </span>
-            <span>{formatMoney(cartTotalCents)}</span>
-          </Link>
-        </div>
-      )}
-
-      <nav
-        className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-md border-t border-ink/10 bg-surface"
-        style={{ height: 'var(--guest-nav)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-        aria-label="Main"
-      >
-        {tabs.map((tab) => {
-          const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              aria-current={active ? 'page' : undefined}
-              className={`flex min-h-tap flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                active ? 'text-brand-600' : 'text-ink-muted'
-              }`}
+            {children}
+          </main>
+          {cartBar && (
+            <div
+              className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md px-4 pt-2"
+              style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
             >
-              {tab.icon}
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+              {cartBar}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-/** Line icons for the bottom bar, drawn in the text colour so the active tab turns red. */
-const icon = (path: ReactNode) => (
+/** A line-drawn tray, drawn in the text colour. */
+const CART_ICON = (
   <svg
     aria-hidden="true"
     viewBox="0 0 24 24"
@@ -147,30 +139,8 @@ const icon = (path: ReactNode) => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    {path}
+    <path d="M3 4h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.2" />
+    <circle cx="9.5" cy="19.5" r="1.3" />
+    <circle cx="17" cy="19.5" r="1.3" />
   </svg>
 );
-
-const ICONS = {
-  // An open menu card.
-  menu: icon(
-    <>
-      <path d="M3 5.5c2.5-1.2 5.5-1.2 9 .8 3.5-2 6.5-2 9-.8v13c-2.5-1.2-5.5-1.2-9 .8-3.5-2-6.5-2-9-.8z" />
-      <path d="M12 6.3v13" />
-    </>,
-  ),
-  // A ticket with lines: what has been ordered.
-  orders: icon(
-    <>
-      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
-      <path d="M9 8h6M9 12h6M9 16h3" />
-    </>,
-  ),
-  // A card being paid with.
-  bill: icon(
-    <>
-      <rect x="3" y="6" width="18" height="12" rx="1.5" />
-      <path d="M3 10h18M7 15h3" />
-    </>,
-  ),
-};

@@ -16,9 +16,9 @@ import { createTranslator, type Translator } from '../../i18n';
  * Guest-side state: chosen language and the cart.
  *
  * Both live in localStorage, so a reload, an accidental tab close or a phone
- * locking itself mid-meal does not lose the order being assembled. Neither is
- * ever trusted by the server: the cart carries item ids and quantities only,
- * and every price is recomputed server-side at submit.
+ * locking itself mid-meal does not lose what the guest has picked. The cart is
+ * never sent anywhere: it is a list for the guest to show the waiter, who takes
+ * the order at the table and keys it into the POS.
  */
 export interface CartLine {
   readonly menuItemId: string;
@@ -26,17 +26,6 @@ export interface CartLine {
   readonly dishNumber: string | null;
   readonly unitPriceCents: number;
   readonly quantity: number;
-}
-
-/**
- * An order the guest has sent but is still allowed to change. Held here rather
- * than in the cart page so that walking back to the menu to add a dish does not
- * lose track of which order is being changed.
- */
-export interface EditingOrder {
-  readonly orderId: string;
-  readonly orderNumber: number;
-  readonly expiresAt: string;
 }
 
 interface CustomerState {
@@ -48,22 +37,16 @@ interface CustomerState {
   setQuantity: (menuItemId: string, quantity: number) => void;
   removeFromCart: (menuItemId: string) => void;
   clearCart: () => void;
+  /** How many of one dish are in the cart, for the badge on its add button. */
+  quantityOf: (menuItemId: string) => number;
   cartCount: number;
   cartTotalCents: number;
-  /** Reused across retries so a network hiccup cannot create a second order. */
-  idempotencyKey: string;
-  rotateIdempotencyKey: () => void;
-  editingOrder: EditingOrder | null;
-  startEditingOrder: (order: EditingOrder, lines: CartLine[]) => void;
-  stopEditingOrder: () => void;
 }
 
 const Context = createContext<CustomerState | null>(null);
 
 const LOCALE_KEY = 'aw.locale';
 const CART_KEY = 'aw.cart';
-const EDITING_KEY = 'aw.editingOrder';
-const KEY_KEY = 'aw.idemKey';
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -85,50 +68,24 @@ function write(key: string, value: unknown): void {
   }
 }
 
-function newKey(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 export function CustomerProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [editingOrder, setEditingOrder] = useState<EditingOrder | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState<string>('pending');
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const storedLocale = read<string>(LOCALE_KEY, DEFAULT_LOCALE);
-    if (isLocale(storedLocale)) setLocaleState(storedLocale);
-    setCart(read<CartLine[]>(CART_KEY, []));
-
-    // Each route mounts its own provider, so this state only survives a
-    // navigation by being written down. A window that has since run out is
-    // dropped rather than restored: the order is with the kitchen by then.
-    const storedEditing = read<EditingOrder | null>(EDITING_KEY, null);
-    if (storedEditing && new Date(storedEditing.expiresAt).getTime() > Date.now()) {
-      setEditingOrder(storedEditing);
-    } else if (storedEditing) {
-      write(EDITING_KEY, null);
+    if (isLocale(storedLocale)) {
+      setLocaleState(storedLocale);
+      document.documentElement.lang = storedLocale;
     }
-
-    const storedKey = read<string>(KEY_KEY, '');
-    setIdempotencyKey(storedKey || newKey());
+    setCart(read<CartLine[]>(CART_KEY, []));
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (hydrated) write(CART_KEY, cart);
   }, [cart, hydrated]);
-
-  useEffect(() => {
-    if (hydrated) write(KEY_KEY, idempotencyKey);
-  }, [idempotencyKey, hydrated]);
-
-  useEffect(() => {
-    if (hydrated) write(EDITING_KEY, editingOrder);
-  }, [editingOrder, hydrated]);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
@@ -165,19 +122,11 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearCart = useCallback(() => setCart([]), []);
-  const rotateIdempotencyKey = useCallback(() => setIdempotencyKey(newKey()), []);
 
-  /** Loads a sent order back into the cart so the guest can change it. */
-  const startEditingOrder = useCallback((order: EditingOrder, lines: CartLine[]) => {
-    setEditingOrder(order);
-    setCart(lines);
-  }, []);
-
-  /** Leaves the order as it stands and empties the working cart. */
-  const stopEditingOrder = useCallback(() => {
-    setEditingOrder(null);
-    setCart([]);
-  }, []);
+  const quantityOf = useCallback(
+    (menuItemId: string) => cart.find((l) => l.menuItemId === menuItemId)?.quantity ?? 0,
+    [cart],
+  );
 
   const value = useMemo<CustomerState>(
     () => ({
@@ -189,28 +138,11 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       setQuantity,
       removeFromCart,
       clearCart,
+      quantityOf,
       cartCount: cart.reduce((n, l) => n + l.quantity, 0),
       cartTotalCents: cart.reduce((n, l) => n + l.unitPriceCents * l.quantity, 0),
-      idempotencyKey,
-      rotateIdempotencyKey,
-      editingOrder,
-      startEditingOrder,
-      stopEditingOrder,
     }),
-    [
-      locale,
-      setLocale,
-      cart,
-      addToCart,
-      setQuantity,
-      removeFromCart,
-      clearCart,
-      idempotencyKey,
-      rotateIdempotencyKey,
-      editingOrder,
-      startEditingOrder,
-      stopEditingOrder,
-    ],
+    [locale, setLocale, cart, addToCart, setQuantity, removeFromCart, clearCart, quantityOf],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

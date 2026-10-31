@@ -26,12 +26,24 @@ export default {
         /* Errors sit apart from the brand red: deeper, browner, never filled. */
         danger: { 500: '#8c1c13', 50: '#fbeeec' },
         warn: { 500: '#8a5a00', 50: '#fdf4e3' },
+        /* The classic menu is the printed one: chalk on a blackboard. Its red is
+           lighter than the brand red, which is too dark to read on black
+           (#ef5a5f is 5:1 on the board). */
+        book: {
+          table: '#0f1112',
+          board: '#1c1f20',
+          chalk: '#f2f1ec',
+          dim: '#b9bab5',
+          red: '#ef5a5f',
+        },
       },
       fontFamily: {
         /* Headings use Plex Sans; body uses the Thai cut, whose Latin glyphs
            are identical — this is exactly how asiaway.ch pairs them. */
         sans: ['var(--font-plex-thai)', 'system-ui', 'sans-serif'],
         display: ['var(--font-plex-sans)', 'system-ui', 'sans-serif'],
+        /* The printed menu's lowercase, rounded section titles. */
+        book: ['var(--font-book)', 'var(--font-plex-sans)', 'system-ui', 'sans-serif'],
       },
       /* asiaway.ch has no rounded corners anywhere. The scale is flattened so
          existing `rounded-xl` / `rounded-2xl` call sites inherit that. */

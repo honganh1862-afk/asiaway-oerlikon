@@ -34,4 +34,9 @@ describe('which restaurant a deployment serves', () => {
     expect(RESTAURANT_PROFILES.winterthur.queueWaiterOrders).toBe(true);
     expect(RESTAURANT_PROFILES.oerlikon.queueWaiterOrders).toBe(false);
   });
+
+  it('asks for Google reviews of Winterthur only, which is the listing it links to', () => {
+    expect(RESTAURANT_PROFILES.winterthur.reviewUrl).toMatch(/^https:\/\/maps\.app\.goo\.gl\//);
+    expect(RESTAURANT_PROFILES.oerlikon.reviewUrl).toBeNull();
+  });
 });

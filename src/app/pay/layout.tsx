@@ -4,7 +4,7 @@ import { GUEST_VIEWPORT } from '../../config/viewport';
 
 export const viewport = GUEST_VIEWPORT;
 
-export default function OrdersLayout({ children }: { children: React.ReactNode }) {
+export default function PayLayout({ children }: { children: React.ReactNode }) {
   return (
     <CustomerProvider>
       <Shell>{children}</Shell>

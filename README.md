@@ -47,11 +47,21 @@ overridden.
 
 ## What it does
 
-**Guest** — scans a table QR · picks English, German or Vietnamese · browses food
-and drinks with prices, allergens and photos where they exist · adds to a cart
-that survives a reload · adds a free-text special request · sends the order ·
-keeps browsing · orders again in the same session · sees the final order if staff
-adjusted it · asks for the bill. No account, no name, no phone, no email.
+**Guest** — scans a table QR · picks English, German or Vietnamese · chooses how
+to read the menu: **Classic**, a book that turns page by page like the printed
+menu (chalkboard pages, a photo opening each section), or **Modern**, the
+scrolling list with photos and categories · switches between the Vietnamese,
+Thai and drinks menus in either · adds dishes to a cart that survives a reload ·
+shows the cart to the waiter, who comes to the table and takes the order (the
+guest's phone sends no order) · where the restaurant allows it, calls a waiter
+over from the cart · when finished, is shown where to pay (Winterthur: the
+counter in front of the stairs, with the table number to give) and invited to
+review the restaurant on Google. A four-step guide (choose · waiter takes the
+order · enjoy · pay) on the start screen, the cart and the paying page shows
+where they are. No account, no name, no phone, no email.
+
+The guest order endpoints (`/api/orders`, `/api/checkout-request`) are still in
+place and tested, but no guest screen calls them any more.
 
 **Waiter** — signs in · gets a live alert with sound that repeats until it is
 opened · reviews the order with the guest's special request shown prominently ·

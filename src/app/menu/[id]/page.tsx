@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useCustomer } from '../../../components/customer/CustomerProvider';
@@ -30,6 +29,14 @@ export default function ItemDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState(false);
 
+  // A dish opens from either menu; going back returns the guest to the same
+  // view and, in the classic one, the same page. Opened from a shared link,
+  // there is nothing to go back to, so it lands on the menu choice.
+  const goBack = () => {
+    if (window.history.length > 1) router.back();
+    else router.push('/menu');
+  };
+
   useEffect(() => {
     // The language switches to the guest's saved one just after the page opens;
     // a load started in the old language must not land after the new one.
@@ -52,9 +59,9 @@ export default function ItemDetailPage() {
     return (
       <div className="space-y-3">
         <p className="card p-4 text-sm">{t('common.error')}</p>
-        <Link href="/menu" className="btn-secondary">
+        <button type="button" onClick={goBack} className="btn-secondary">
           {t('common.back')}
-        </Link>
+        </button>
       </div>
     );
   }
@@ -74,9 +81,13 @@ export default function ItemDetailPage() {
     // Extra room at the end for the add bar, which is taller than the cart bar
     // the page frame allows for; without it the allergen note ends up beneath it.
     <article className="space-y-4 pb-20">
-      <Link href="/menu" className="inline-flex min-h-tap items-center text-sm text-ink-muted">
+      <button
+        type="button"
+        onClick={goBack}
+        className="inline-flex min-h-tap items-center text-sm text-ink-muted"
+      >
         ← {t('common.back')}
-      </Link>
+      </button>
 
       {/* No image element at all when there is no photograph: the spec forbids
           placeholder or misleading imagery. */}
@@ -131,7 +142,10 @@ export default function ItemDetailPage() {
           {t('menu.soldOut')}
         </p>
       ) : (
-        <div className="fixed inset-x-0 bottom-[var(--guest-nav)] z-20 mx-auto max-w-md space-y-2 bg-surface-sunken/95 px-4 py-3 backdrop-blur">
+        <div
+          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md space-y-2 bg-surface-sunken/95 px-4 pt-3 backdrop-blur"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        >
           <div className="flex items-center justify-center gap-4">
             <button
               type="button"
@@ -166,7 +180,7 @@ export default function ItemDetailPage() {
                 },
                 quantity,
               );
-              router.push('/menu');
+              goBack();
             }}
           >
             {t('item.add')} · {formatMoney(item.priceCents * quantity)}

@@ -57,11 +57,10 @@ body {
   .card {
     @apply border border-ink/10 bg-surface;
   }
-  /* The guest header and bottom bar, each with the iPhone's safe area added, so
-     everything pinned to them lines up on a phone with a notch or home bar. */
+  /* The guest header, with the iPhone's safe area added, so everything pinned
+     under it lines up on a phone with a notch. */
   .guest-frame {
     --guest-header: calc(4rem + env(safe-area-inset-top));
-    --guest-nav: calc(3.5rem + env(safe-area-inset-bottom));
   }
   .field {
     @apply w-full border border-ink/25 bg-surface px-4 py-3 text-base

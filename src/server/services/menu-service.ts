@@ -17,6 +17,8 @@ export interface LocalisedMenuItem {
   readonly dishNumber: string | null;
   readonly volume: string | null;
   readonly name: string;
+  /** The Vietnamese name whatever the language, as the printed menu shows it under the dish. */
+  readonly nameVi: string;
   readonly description: string;
   readonly priceCents: number;
   readonly allergenCodes: string[];
@@ -95,6 +97,7 @@ export async function getMenu(
             dishNumber: item.dishNumber,
             volume: item.volume,
             name: isSpecial ? pick(special, 'name', locale) : pick(item, 'name', locale),
+            nameVi: isSpecial ? pick(special, 'name', 'vi') : item.nameVi,
             description: isSpecial
               ? pick(special, 'description', locale)
               : pick(item, 'description', locale),
@@ -131,6 +134,7 @@ export async function getMenuItem(
     dishNumber: row.item.dishNumber,
     volume: row.item.volume,
     name: pick(row.item, 'name', locale),
+    nameVi: row.item.nameVi,
     description: pick(row.item, 'description', locale),
     priceCents: row.item.priceCents,
     allergenCodes: row.item.allergenCodes,

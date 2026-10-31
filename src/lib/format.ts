@@ -11,6 +11,14 @@ export function formatMoney(cents: number): string {
   }).format(cents / 100);
 }
 
+/** A price as the printed menu shows it, without the currency: "12.50". */
+export function formatPrice(cents: number): string {
+  return new Intl.NumberFormat(NUMBER_LOCALE, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
 /**
  * Timestamps are authoritative UTC from the server and are rendered in the
  * restaurant's local time — never the customer device's clock.

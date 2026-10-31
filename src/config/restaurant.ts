@@ -37,6 +37,12 @@ export interface RestaurantProfile {
    * both, each on its own tab; Oerlikon has the Vietnamese menu only.
    */
   readonly thaiMenu: boolean;
+  /**
+   * Where a guest who enjoyed the visit can leave a review: the restaurant's
+   * Google Maps listing. Null where none has been supplied, and then the menu
+   * asks for none.
+   */
+  readonly reviewUrl: string | null;
 }
 
 export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, RestaurantProfile>> = {
@@ -46,6 +52,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'table',
     guestCallsStaff: false,
     thaiMenu: false,
+    reviewUrl: null,
   },
   winterthur: {
     saturdayMenu: false,
@@ -53,6 +60,8 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     guestCallsStaff: true,
     thaiMenu: true,
+    // "Asiaway Restaurant Winterthur" on Google Maps.
+    reviewUrl: 'https://maps.app.goo.gl/2zNqQCJNHLKMi4WA8',
   },
 };
 
