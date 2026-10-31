@@ -19,10 +19,11 @@ import { slugify, type CategoryMeta, type ImportedMenuItem } from './import';
  *    ("Coca Cola", "Sake", "Tsingtao") and the rest are German as printed. An
  *    invented translation would be worse than an untranslated one.
  *  - No descriptions. The UI omits the line rather than showing a blank.
- *  - Allergens come from the CSV's Allergens column where the restaurant has
- *    filled it in. A blank cell means NOT DECLARED, which the UI states
- *    explicitly rather than rendering as "contains nothing" — an undeclared
- *    allergen must never look like an absent one.
+ *  - Allergens come from the CSV's Allergens column, declared from what each
+ *    drink is (see docs/DRINKS_ALLERGEN_REVIEW.md). As on the printed drinks
+ *    list, a drink shows codes only where they apply: a blank cell shows
+ *    nothing, at the restaurant's request. So a drink that could contain an
+ *    allergen is declared, conservatively, rather than left blank.
  */
 export const DRINKS_CSV_COLUMNS = {
   category: 'Category',
@@ -107,9 +108,9 @@ export const DRINK_CATEGORY_META: Readonly<Record<string, CategoryMeta>> = {
 };
 
 export const MISSING_ALLERGEN_WARNING =
-  'Some drinks have no allergen codes yet. A blank cell is shown to guests as ' +
-  '"not declared", never as "allergen free". See docs/DRINKS_ALLERGEN_REVIEW.md ' +
-  'for the list awaiting confirmation, and re-import once the CSV is filled in.';
+  'Drink allergens were declared from what each drink is and still need the ' +
+  "restaurant's confirmation. A drink with a blank cell shows guests no " +
+  'allergens at all. See docs/DRINKS_ALLERGEN_REVIEW.md.';
 
 export interface ImportedDrinks {
   readonly categories: readonly CategoryMeta[];

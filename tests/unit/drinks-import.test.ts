@@ -75,28 +75,35 @@ describe('drinks import from the real Asiaway CSV', () => {
     expect(byName.get('Cappuccino')!.allergenCodes).toEqual(['G']);
     expect(byName.get('Schale (mit warmer Milch)')!.allergenCodes).toEqual(['G']);
     expect(byName.get('Thai Red Milk Tea')!.allergenCodes).toEqual(['G']);
-    // Sulfites: grape-wine based.
+    // Sulfites: wine, grape or rice or fruit.
     expect(byName.get('Prosecco')!.allergenCodes).toEqual(['O']);
     expect(byName.get('Aperol Spritz')!.allergenCodes).toEqual(['O']);
+    expect(byName.get('Sake (Japan)')!.allergenCodes).toEqual(['O']);
+    expect(byName.get('Lycheewine (China)')!.allergenCodes).toEqual(['O']);
   });
 
-  it('leaves genuinely uncertain drinks undeclared rather than guessing', () => {
+  it('declares milk wherever a coffee may well carry it', () => {
+    // A blank drink shows guests nothing, so a missed milk is the dangerous
+    // mistake: crème, and the condensed milk of Vietnamese coffee, count.
     const byName = new Map(drinks.items.map((i) => [i.nameEn, i]));
-    // Sulfites in sake and soju vary by producer; the house coffee recipe
-    // decides whether condensed milk is involved. A wrong declaration is worse
-    // than a missing one, so these stay blank until the restaurant confirms.
     for (const name of [
-      'Sake (Japan)',
-      'Soju Original (Korea)',
       'Café Crème',
       'Vietnamesischer Eiskaffee',
+      'Vietnamesischer Heisskaffee (siehe Bild)',
     ]) {
+      expect(byName.get(name)!.allergenCodes, name).toEqual(['G']);
+    }
+  });
+
+  it('leaves blank only drinks whose name points to no allergen', () => {
+    const byName = new Map(drinks.items.map((i) => [i.nameEn, i]));
+    for (const name of ['Mineralwasser ohne Kohlensäure', 'Coca Cola', 'Espresso', 'Soju Original (Korea)']) {
       expect(byName.get(name)!.allergenCodes, name).toEqual([]);
     }
   });
 
-  it('declares allergens on 16 drinks and leaves the rest blank', () => {
-    expect(drinks.stats.withAllergens).toBe(16);
+  it('declares allergens on 22 drinks and leaves the rest blank', () => {
+    expect(drinks.stats.withAllergens).toBe(22);
     expect(drinks.stats.withAllergens + drinks.stats.withoutAllergens).toBe(50);
   });
 

@@ -224,12 +224,14 @@ export default function ModernMenuPage() {
                       <span className="font-semibold">{formatMoney(item.priceCents)}</span>
                       {item.allergenCodes.length > 0 ? (
                         <span className="chip">{item.allergenCodes.join(' ')}</span>
-                      ) : (
-                        /* Never let "no codes" read as "no allergens". */
+                      ) : category.kind === 'FOOD' ? (
+                        /* Never let "no codes" read as "no allergens" on a dish.
+                           Drinks show codes only where they apply, as the
+                           printed drinks list does. */
                         <span className="chip bg-warn-50 text-warn-500">
                           {t('menu.allergens.none')}
                         </span>
-                      )}
+                      ) : null}
                       {!item.isAvailable && (
                         <span className="chip bg-danger-50 text-danger-500">{t('menu.soldOut')}</span>
                       )}

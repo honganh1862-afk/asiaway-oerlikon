@@ -119,7 +119,7 @@ export async function getMenuItem(
   db: Db,
   id: string,
   locale: Locale,
-): Promise<LocalisedMenuItem & { categoryName: string }> {
+): Promise<LocalisedMenuItem & { categoryName: string; categoryKind: 'FOOD' | 'DRINK' }> {
   const rows = await db
     .select({ item: menuItems, category: menuCategories })
     .from(menuItems)
@@ -141,6 +141,7 @@ export async function getMenuItem(
     imagePath: row.item.imagePath,
     isAvailable: row.item.isAvailable,
     categoryName: pick(row.category, 'name', locale),
+    categoryKind: row.category.kind,
   };
 }
 

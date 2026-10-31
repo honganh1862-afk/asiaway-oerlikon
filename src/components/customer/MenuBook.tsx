@@ -78,6 +78,8 @@ export function MenuBook({
   // The Vietnamese name sits under the dish on the Vietnamese menu only, and
   // not when the guest is already reading in Vietnamese.
   const showVi = tab === 'FOOD' && locale !== 'vi';
+  // Drinks show allergen codes only where they apply, as on the printed list.
+  const drinks = tab === 'DRINK';
 
   const stage = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -340,6 +342,7 @@ export function MenuBook({
                 key={item.id}
                 item={item}
                 showVi={showVi}
+                drink={drinks}
                 quantity={quantityOf(item.id)}
                 onAdd={(dish) => add(dish, page)}
                 t={t}
@@ -453,7 +456,7 @@ export function MenuBook({
                 </div>
                 {category.items.map((item) => (
                   <div key={item.id} data-measure-item={item.id}>
-                    <DishEntry item={item} showVi={showVi} quantity={0} onAdd={() => {}} t={t} />
+                    <DishEntry item={item} showVi={showVi} drink={drinks} quantity={0} onAdd={() => {}} t={t} />
                   </div>
                 ))}
               </Fragment>
@@ -581,12 +584,14 @@ function ContinuedTitle({ name, t }: { name: string; t: Translator }) {
 function DishEntry({
   item,
   showVi,
+  drink,
   quantity,
   onAdd,
   t,
 }: {
   item: MenuItem;
   showVi: boolean;
+  drink: boolean;
   quantity: number;
   onAdd: (item: MenuItem) => void;
   t: Translator;
@@ -610,14 +615,17 @@ function DishEntry({
         </div>
         <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[13px] leading-snug">
           <span className="min-w-0 italic text-book-dim">{showVi && item.nameVi !== item.name ? item.nameVi : ''}</span>
-          {/* Never let "no codes" read as "no allergens". */}
-          <span
-            className={`shrink-0 text-xs ${
-              declared ? 'font-semibold tracking-wide text-book-red' : 'italic text-book-dim'
-            }`}
-          >
-            {declared ? item.allergenCodes.join(' ') : t('menu.allergens.ask')}
-          </span>
+          {/* Never let "no codes" read as "no allergens" on a dish; a drink
+              without codes shows none, as on the printed drinks list. */}
+          {(declared || !drink) && (
+            <span
+              className={`shrink-0 text-xs ${
+                declared ? 'font-semibold tracking-wide text-book-red' : 'italic text-book-dim'
+              }`}
+            >
+              {declared ? item.allergenCodes.join(' ') : t('menu.allergens.ask')}
+            </span>
+          )}
         </div>
         {item.description && (
           <p className="mt-1 text-[13px] font-normal leading-snug text-book-dim">{item.description}</p>
