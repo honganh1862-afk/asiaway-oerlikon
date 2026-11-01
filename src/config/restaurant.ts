@@ -31,6 +31,13 @@ export interface RestaurantProfile {
    * both, each on its own tab; Oerlikon has the Vietnamese menu only.
    */
   readonly thaiMenu: boolean;
+  /** The dessert card, n° 130–137. Winterthur's; Oerlikon has supplied none. */
+  readonly dessertMenu: boolean;
+  /**
+   * The wine list (sparkling, white, rosé and red, by the glass and the bottle)
+   * and the teas from the beverage book. Winterthur's; Oerlikon has supplied none.
+   */
+  readonly wineAndTea: boolean;
   /**
    * Where a guest who enjoyed the visit can leave a review: the restaurant's
    * Google Maps listing. Null where none has been supplied, and then the menu
@@ -45,6 +52,8 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     counterPlace: null,
     thaiMenu: false,
+    dessertMenu: false,
+    wineAndTea: false,
     // "Asiaway" in Zürich-Oerlikon on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/nFY8toA4d164p12q7',
   },
@@ -53,6 +62,8 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     counterPlace: 'stairs',
     thaiMenu: true,
+    dessertMenu: true,
+    wineAndTea: true,
     // "Asiaway Restaurant Winterthur" on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/2zNqQCJNHLKMi4WA8',
   },

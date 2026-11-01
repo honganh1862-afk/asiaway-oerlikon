@@ -26,9 +26,9 @@ import {
   menuItems,
   restaurantTables,
 } from '../src/server/db/schema';
-import { loadFoodMenus } from '../src/server/menu/food-menus';
-import { MISSING_ALLERGEN_WARNING, parseDrinksCsv } from '../src/server/menu/drinks-import';
-import { loadPhotoManifest, photoFor } from '../src/server/menu/photos';
+import { loadShippedMenu } from '../src/server/menu/sync-menu';
+import { MISSING_ALLERGEN_WARNING } from '../src/server/menu/drinks-import';
+import { photoFor } from '../src/server/menu/photos';
 import { ALLERGENS } from '../src/domain/menu/allergens';
 import { generateQrToken } from '../src/domain/session/qr-token';
 import { tableUrl } from '../src/domain/table';
@@ -40,13 +40,7 @@ const DEMO_TABLES = [
 ];
 
 async function seedMenu(db: AppDatabase): Promise<number> {
-  const photos = loadPhotoManifest();
-  const food = loadFoodMenus(resolve(process.cwd(), 'data'), { thai: RESTAURANT.thaiMenu });
-
-  const drinksPath = resolve(process.cwd(), 'data/asiaway_drinks_menu.csv');
-  const drinks = existsSync(drinksPath)
-    ? parseDrinksCsv(readFileSync(drinksPath, 'utf8'))
-    : { categories: [], items: [] };
+  const { food, drinks, photos } = loadShippedMenu(resolve(process.cwd(), 'data'));
 
   if (drinks.items.length > 0) console.warn(`\n  NOTE: ${MISSING_ALLERGEN_WARNING}\n`);
 

@@ -3,16 +3,17 @@ import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client';
 import { allergens, menuCategories, menuItems } from '../db/schema';
-import { RESTAURANT } from '../../config/restaurant';
+import { RESTAURANT, type RestaurantProfile } from '../../config/restaurant';
 import { ALLERGENS } from '../../domain/menu/allergens';
 import { loadFoodMenus } from './food-menus';
-import { parseDrinksCsv } from './drinks-import';
+import { mergeDrinks, parseDrinksCsv } from './drinks-import';
 import { loadPhotoManifest, photoFor, type PhotoManifest } from './photos';
 import type { ImportedMenu } from './import';
 
 /**
- * The menu this deployment ships, read from data/: the Vietnamese menu, the
- * Thai one where this restaurant serves it, and the drinks.
+ * The menu this deployment ships, read from data/: the Vietnamese menu and the
+ * drinks, plus the Thai menu, the dessert card and the wine list where this
+ * restaurant serves them.
  */
 export interface ShippedMenu {
   readonly food: ImportedMenu;
@@ -20,10 +21,15 @@ export interface ShippedMenu {
   readonly photos: PhotoManifest;
 }
 
-export function loadShippedMenu(dataDir = join(process.cwd(), 'data')): ShippedMenu {
+export function loadShippedMenu(
+  dataDir = join(process.cwd(), 'data'),
+  profile: Pick<RestaurantProfile, 'thaiMenu' | 'dessertMenu' | 'wineAndTea'> = RESTAURANT,
+): ShippedMenu {
+  const read = (file: string) => readFileSync(join(dataDir, file), 'utf8');
+  const drinks = parseDrinksCsv(read('asiaway_drinks_menu.csv'));
   return {
-    food: loadFoodMenus(dataDir, { thai: RESTAURANT.thaiMenu }),
-    drinks: parseDrinksCsv(readFileSync(join(dataDir, 'asiaway_drinks_menu.csv'), 'utf8')),
+    food: loadFoodMenus(dataDir, { thai: profile.thaiMenu, desserts: profile.dessertMenu }),
+    drinks: profile.wineAndTea ? mergeDrinks(drinks, parseDrinksCsv(read('wine_and_tea_list.csv'))) : drinks,
     photos: loadPhotoManifest(dataDir),
   };
 }
