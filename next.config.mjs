@@ -18,10 +18,12 @@ const nextConfig = {
     '*': ['node_modules/@electric-sql/pglite/**'],
   },
 
-  // The provisioning route reads the migration SQL and the menu CSVs at runtime,
-  // so they must travel with that function. Nothing else needs them.
+  // Every function reads the migration SQL and the menu CSVs at runtime: the
+  // database handle applies pending migrations and imports missing dishes on
+  // its first use (server/db/index.ts), whichever route that happens in. So
+  // they travel with all of them; together they are under 100 KB.
   outputFileTracingIncludes: {
-    '/api/admin/setup': ['./migrations/**', './data/**'],
+    '/**': ['./migrations/**', './data/**'],
   },
   async headers() {
     return [

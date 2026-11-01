@@ -52,7 +52,8 @@ order · enjoy · pay) on the start screen, the cart and the paying page shows
 where they are.
 
 What differs between the restaurants is in `src/config/restaurant.ts` (Thai
-menu, Saturday menu, where the counter is, the review link) and their table
+menu, dessert card, wine list and teas, Saturday menu, where the counter is,
+the review link) and their table
 lists in `data/`.
 
 ## Menu data

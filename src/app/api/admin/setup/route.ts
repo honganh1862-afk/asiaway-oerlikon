@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { timingSafeEqual } from 'node:crypto';
 import { join } from 'node:path';
 import { NextResponse } from 'next/server';
@@ -6,18 +5,11 @@ import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, getDatabase } from '../../../../server/db/index';
 import { runMigrations } from '../../../../server/db/migrator';
-import {
-  allergens,
-  menuCategories,
-  menuItems,
-  restaurantTables,
-} from '../../../../server/db/schema';
-import { loadFoodMenus } from '../../../../server/menu/food-menus';
-import { parseDrinksCsv } from '../../../../server/menu/drinks-import';
-import { loadPhotoManifest, photoFor } from '../../../../server/menu/photos';
+import { menuItems, restaurantTables } from '../../../../server/db/schema';
+import { applyShippedMenu, loadShippedMenu } from '../../../../server/menu/sync-menu';
+import { photoFor } from '../../../../server/menu/photos';
 import { provisionSaturdayMenu } from '../../../../server/menu/provision-saturday';
 import { RESTAURANT } from '../../../../config/restaurant';
-import { ALLERGENS } from '../../../../domain/menu/allergens';
 import { generateQrToken } from '../../../../domain/session/qr-token';
 import { tableUrl } from '../../../../domain/table';
 
@@ -88,90 +80,9 @@ export async function POST(request: Request) {
     const migrations = await runMigrations(database, executeMultiple);
 
     // --- menu ------------------------------------------------------------
-    const dataDir = join(process.cwd(), 'data');
-    const food = loadFoodMenus(dataDir, { thai: RESTAURANT.thaiMenu });
-    const drinks = parseDrinksCsv(readFileSync(join(dataDir, 'asiaway_drinks_menu.csv'), 'utf8'));
-    const photos = loadPhotoManifest(dataDir);
-
-    for (const a of ALLERGENS) {
-      await database
-        .insert(allergens)
-        .values({ code: a.code, nameEn: a.nameEn, nameDe: a.nameDe, nameVi: a.nameVi })
-        .onConflictDoUpdate({
-          target: allergens.code,
-          set: { nameEn: a.nameEn, nameDe: a.nameDe, nameVi: a.nameVi },
-        });
-    }
-
-    const categoryIds = new Map<string, string>();
-    for (const c of [...food.categories, ...drinks.categories]) {
-      const [row] = await database
-        .insert(menuCategories)
-        .values({
-          slug: c.slug,
-          kind: c.kind,
-          nameEn: c.nameEn,
-          nameDe: c.nameDe,
-          nameVi: c.nameVi,
-          sortOrder: c.sortOrder,
-        })
-        .onConflictDoUpdate({
-          target: menuCategories.slug,
-          set: {
-            kind: c.kind,
-            nameEn: c.nameEn,
-            nameDe: c.nameDe,
-            nameVi: c.nameVi,
-            sortOrder: c.sortOrder,
-            isActive: true,
-          },
-        })
-        .returning({ id: menuCategories.id });
-      categoryIds.set(c.slug, row!.id);
-    }
-
-    for (const item of [...food.items, ...drinks.items]) {
-      await database
-        .insert(menuItems)
-        .values({
-          categoryId: categoryIds.get(item.categorySlug)!,
-          externalKey: item.externalKey,
-          dishNumber: item.dishNumber || null,
-          volume: item.volume ?? null,
-          nameEn: item.nameEn,
-          nameDe: item.nameDe,
-          nameVi: item.nameVi,
-          descriptionEn: item.descriptionEn,
-          descriptionDe: item.descriptionDe,
-          descriptionVi: item.descriptionVi,
-          priceCents: item.priceCents,
-          allergenCodes: [...item.allergenCodes],
-          imagePath: photoFor(photos, item.dishNumber),
-          sortOrder: item.sortOrder,
-        })
-        .onConflictDoUpdate({
-          target: menuItems.externalKey,
-          set: {
-            categoryId: categoryIds.get(item.categorySlug)!,
-            dishNumber: item.dishNumber || null,
-            volume: item.volume ?? null,
-            nameEn: item.nameEn,
-            nameDe: item.nameDe,
-            nameVi: item.nameVi,
-            descriptionEn: item.descriptionEn,
-            descriptionDe: item.descriptionDe,
-            descriptionVi: item.descriptionVi,
-            priceCents: item.priceCents,
-            allergenCodes: [...item.allergenCodes],
-            imagePath: photoFor(photos, item.dishNumber),
-            sortOrder: item.sortOrder,
-            isActive: true,
-            updatedAt: new Date(),
-            // Availability is NOT reset: an import must never quietly put a dish
-            // the waiter marked sold out back on sale.
-          },
-        });
-    }
+    const shipped = loadShippedMenu(join(process.cwd(), 'data'));
+    const { food, drinks, photos } = shipped;
+    await applyShippedMenu(database, shipped);
 
     // The Saturday dishes, which come from the restaurant directly rather than
     // from either CSV — and only for a restaurant that serves them.

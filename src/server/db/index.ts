@@ -46,6 +46,21 @@ async function create(): Promise<DatabaseHandle> {
       await runMigrations(db, executeMultiple);
     }
 
+    // Likewise the menu: a dish the code ships but the database has never seen
+    // (the Thai menu, when it reached Winterthur) is imported here rather than
+    // waiting for someone to remember /api/admin/setup. A failure is logged and
+    // the site serves the menu it already has: a missing new dish must never
+    // take the existing menu down with it.
+    if (process.env.MENU_SYNC_ON_BOOT !== '0') {
+      try {
+        const { syncShippedMenuIfMissing } = await import('../menu/sync-menu');
+        const result = await syncShippedMenuIfMissing(db);
+        if (result.imported) console.info(`[menu] imported ${result.missing} missing dishes`);
+      } catch (error) {
+        console.error('[menu] boot sync failed; serving the menu already in the database', error);
+      }
+    }
+
     return { db, mode: 'postgres', executeMultiple };
   }
 
