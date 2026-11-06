@@ -10,14 +10,15 @@ const manifest = loadPhotoManifest();
 const menu = parseMenuCsv(
   readFileSync(resolve(process.cwd(), 'data/menu_trilingual_EN_DE_VI.csv'), 'utf8'),
 );
-// Winterthur's full food: the Vietnamese menu and the Thai one.
-const bothMenus = loadFoodMenus(resolve(process.cwd(), 'data'), { thai: true });
+// Winterthur's full food: the Vietnamese menu, the Thai one and the desserts.
+const bothMenus = loadFoodMenus(resolve(process.cwd(), 'data'), { thai: true, desserts: true });
 
 describe('dish photographs', () => {
-  it('maps 38 photos — 17 Vietnamese, 21 Thai — all of which exist on disk', () => {
+  it('maps 47 photos — 17 Vietnamese, 9 desserts, 21 Thai — all of which exist on disk', () => {
     const entries = Object.entries(manifest.photos);
-    expect(entries).toHaveLength(38);
+    expect(entries).toHaveLength(47);
     expect(entries.filter(([dish]) => parseFloat(dish) >= 200)).toHaveLength(21);
+    expect(entries.filter(([dish]) => parseFloat(dish) >= 130 && parseFloat(dish) < 140)).toHaveLength(9);
     for (const [dish, path] of entries) {
       expect(existsSync(resolve(process.cwd(), 'public', path.slice(1))), `${dish}: ${path}`).toBe(
         true,
@@ -39,6 +40,21 @@ describe('dish photographs', () => {
     expect(photoFor(manifest, '12.2')).toBe('/images/menu/dish-12.2.jpg');
     for (const other of ['12.1', '12.3', '12.4']) {
       expect(photoFor(manifest, other), other).toBeNull();
+    }
+  });
+
+  it('gives the desserts their photos from the dessert card, the mochi photo only to the flavours it shows', () => {
+    for (const dish of ['130', '131', '132', '133', '134', '135']) {
+      expect(photoFor(manifest, dish), dish).toBe(`/images/menu/dish-${dish}.jpg`);
+    }
+    // The mochi photo shows a berry (pink), a mango and a coconut mochi, as the
+    // restaurant confirmed: never the sesame one (an allergen) or the green tea.
+    for (const dish of ['136.2', '136.3', '136.5']) {
+      expect(photoFor(manifest, dish), dish).toBe('/images/menu/dish-136.jpg');
+    }
+    // The ice cream page has no usable photo.
+    for (const dish of ['136.1', '136.4', '137.1', '137.2', '137.3']) {
+      expect(photoFor(manifest, dish), dish).toBeNull();
     }
   });
 

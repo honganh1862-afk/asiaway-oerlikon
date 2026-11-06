@@ -49,6 +49,13 @@ export interface RestaurantProfile {
    * asks for none.
    */
   readonly reviewUrl: string | null;
+  /**
+   * The staff who sign in on their phones to see each table's shared cart, take
+   * orders and clear tables. Empty where the restaurant has no staff screen:
+   * there each phone keeps its own cart, as before. The PIN is not here (this
+   * repository is public): it is the STAFF_PIN setting of the deployment.
+   */
+  readonly staff: readonly string[];
 }
 
 export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, RestaurantProfile>> = {
@@ -62,6 +69,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     wineAndTea: true,
     // "Asiaway" in Zürich-Oerlikon on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/nFY8toA4d164p12q7',
+    staff: [],
   },
   winterthur: {
     saturdayMenu: false,
@@ -73,6 +81,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     wineAndTea: true,
     // "Asiaway Restaurant Winterthur" on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/2zNqQCJNHLKMi4WA8',
+    staff: ['Edmond', 'Viet', 'Xuan', 'Tami', 'Yen', 'April', 'Mersi', 'Trung'],
   },
 };
 
@@ -98,3 +107,8 @@ export function resolveLocation(value: string | undefined): RestaurantLocation {
 // browser bundle when they are referenced literally.
 export const RESTAURANT_LOCATION = resolveLocation(process.env.NEXT_PUBLIC_RESTAURANT_LOCATION);
 export const RESTAURANT = RESTAURANT_PROFILES[RESTAURANT_LOCATION];
+
+/** Whether this restaurant has the staff screen and, with it, one shared cart per table. */
+export function hasStaffScreen(profile: Pick<RestaurantProfile, 'staff'> = RESTAURANT): boolean {
+  return profile.staff.length > 0;
+}

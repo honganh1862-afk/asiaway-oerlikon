@@ -46,3 +46,27 @@ code still work.
   exists. Replace it with a new card.
 - **The menu does not load:** check the internet connection on the phone, then
   `/api/health` on the site. Paper menus are the fallback, as the card says.
+
+## The staff screen (Winterthur)
+
+Open `/staff` on the restaurant's address (for example
+`https://asiaway-winterthur.vercel.app/staff`) and add it to the phone's home
+screen. Tap your name and type the PIN; the sign-in lasts 12 hours.
+
+- **Tables with orders** lists every table whose guests have put something in
+  their cart, the most recently changed first. It updates every few seconds.
+- Everyone at a table shares **one cart**: whatever any phone at the table adds,
+  every phone there sees, and so do you.
+- Tap a table to see its list, by dish number. Change a quantity with − and +,
+  or remove a line. For a guest ordering from the printed menu, open their table
+  (under **All tables**) and add the dish by number or name.
+- Take the order into the till as before: nothing here reaches the kitchen.
+- When the table has paid, tap **Paid — clear table**. The list empties on the
+  guests' phones too, ready for the next guests.
+- **Manage tables** adds a table, sets inside or outside, or removes one (a
+  table with dishes on it must be cleared first). A removed table can be
+  brought back and its printed card works again.
+
+The staff list is `staff` in `src/config/restaurant.ts`; the PIN is the
+`STAFF_PIN` setting on Vercel. After ten wrong PINs from one
+phone, or thirty overall, within 15 minutes, sign-in pauses for a while.

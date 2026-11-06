@@ -25,7 +25,16 @@ export type DomainErrorCode =
   | 'REQUEST_IN_FLIGHT'
   | 'SESSION_HAS_UNRESOLVED_ORDERS'
   | 'REASON_REQUIRED'
-  | 'VALIDATION_FAILED';
+  | 'VALIDATION_FAILED'
+  /** No active table with that number. */
+  | 'TABLE_NOT_FOUND'
+  /** A table with that number is already in service. */
+  | 'TABLE_EXISTS'
+  /** A table with dishes on it cannot be taken out of service. */
+  | 'TABLE_IN_USE'
+  /** Too many wrong PINs from one place; try again later. */
+  | 'RATE_LIMITED'
+  | 'UNAUTHENTICATED';
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode;

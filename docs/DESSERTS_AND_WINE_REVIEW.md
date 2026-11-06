@@ -1,6 +1,7 @@
 # Desserts, wine and tea — review sheet
 
-Transcribed from photos of the printed cards in Winterthur, and served in
+Transcribed from photos of the printed cards in Winterthur and checked against
+the final dessert card (Asiaway_Dessertkarte_IH.pdf), which matches it. Served in
 **both restaurants** (`dessertMenu` and `wineAndTea` in
 `src/config/restaurant.ts`), at the same prices.
 
@@ -28,6 +29,12 @@ German; the English and Vietnamese descriptions are translations to check.
   drinks (the app has 5.30 for 50 cl) and 8.00 for a 33 cl drink (Yuzu Lime
   Lemonade is 7.00). Its names were out of the photo, so nothing was changed:
   send a photo of the whole page.
+
+- **Mochi flavours.** The restaurant says the mochi photo shows mango,
+  strawberry and coconut, but the card offers Himbeer (raspberry), not
+  strawberry. The photo is on Raspberry, Mango and Coconut (never Sesame or
+  Green Tea). Is the berry mochi raspberry or strawberry? If strawberry, the
+  card and the menu should say so.
 
 ## Adapted from the print — please confirm
 
