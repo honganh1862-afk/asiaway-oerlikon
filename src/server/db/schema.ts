@@ -17,6 +17,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   smallint,
   text,
   timestamp,
@@ -406,6 +407,34 @@ export const loginAttempts = pgTable('login_attempts', {
   attemptedAt: timestamp('attempted_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** One shared cart per table (migrations/0013_table_carts.sql). */
+export const tableCarts = pgTable('table_carts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tableId: uuid('table_id')
+    .notNull()
+    .references(() => restaurantTables.id),
+  openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  clearedAt: timestamp('cleared_at', { withTimezone: true }),
+  clearedBy: text('cleared_by'),
+});
+
+export const tableCartLines = pgTable(
+  'table_cart_lines',
+  {
+    cartId: uuid('cart_id')
+      .notNull()
+      .references(() => tableCarts.id, { onDelete: 'cascade' }),
+    menuItemId: uuid('menu_item_id')
+      .notNull()
+      .references(() => menuItems.id),
+    quantity: integer('quantity').notNull(),
+    changedBy: text('changed_by').notNull(),
+    addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.cartId, t.menuItemId] }) }),
+);
+
 export const schema = {
   users,
   allergens,
@@ -426,4 +455,6 @@ export const schema = {
   idempotencyKeys,
   authSessions,
   loginAttempts,
+  tableCarts,
+  tableCartLines,
 };

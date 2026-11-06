@@ -55,7 +55,9 @@ async function create(): Promise<DatabaseHandle> {
       try {
         const { syncShippedMenuIfMissing } = await import('../menu/sync-menu');
         const result = await syncShippedMenuIfMissing(db);
-        if (result.imported) console.info(`[menu] imported ${result.missing} missing dishes`);
+        if (result.imported) {
+          console.info(`[menu] imported: ${result.missing} missing, ${result.changed} changed`);
+        }
       } catch (error) {
         console.error('[menu] boot sync failed; serving the menu already in the database', error);
       }

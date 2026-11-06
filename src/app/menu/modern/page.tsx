@@ -85,7 +85,13 @@ export default function ModernMenuPage() {
   // Photographed dishes of the open tab, in menu order. Sold-out ones stay in
   // the strip so the menu does not appear to change shape through the evening;
   // the card says so.
-  const photographed = tab === 'DRINK' ? [] : shown.flatMap((c) => c.items).filter((i) => i.imagePath);
+  // One photo can stand for several flavours (the mochi); it shows once.
+  const photographed =
+    tab === 'DRINK'
+      ? []
+      : shown
+          .flatMap((c) => c.items)
+          .filter((i, index, all) => i.imagePath && all.findIndex((x) => x.imagePath === i.imagePath) === index);
 
   return (
     <div className="space-y-5">

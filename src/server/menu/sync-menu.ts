@@ -41,7 +41,14 @@ export function loadShippedMenu(
  * it twice changes nothing. It never deletes, and it never resets a dish marked
  * sold out.
  */
-export async function applyShippedMenu(database: AppDatabase, menu: ShippedMenu): Promise<void> {
+export async function applyShippedMenu(
+  database: AppDatabase,
+  menu: ShippedMenu,
+  options: { reactivate?: boolean } = {},
+): Promise<void> {
+  // /api/admin/setup puts every shipped dish back on the menu, as it always
+  // has; the boot sync leaves a dish the restaurant retired retired.
+  const reactivate = options.reactivate ?? true;
   const { food, drinks, photos } = menu;
 
   for (const a of ALLERGENS) {
@@ -74,7 +81,7 @@ export async function applyShippedMenu(database: AppDatabase, menu: ShippedMenu)
           nameDe: c.nameDe,
           nameVi: c.nameVi,
           sortOrder: c.sortOrder,
-          isActive: true,
+          ...(reactivate ? { isActive: true } : {}),
         },
       })
       .returning({ id: menuCategories.id });
@@ -116,7 +123,7 @@ export async function applyShippedMenu(database: AppDatabase, menu: ShippedMenu)
           allergenCodes: [...item.allergenCodes],
           imagePath: photoFor(photos, item.dishNumber),
           sortOrder: item.sortOrder,
-          isActive: true,
+          ...(reactivate ? { isActive: true } : {}),
           updatedAt: new Date(),
           // Availability is NOT reset: an import must never quietly put a dish
           // the waiter marked sold out back on sale.
@@ -134,26 +141,43 @@ export async function applyShippedMenu(database: AppDatabase, menu: ShippedMenu)
  * guests saw no Thai tab. Like the schema migrations, the menu now follows the
  * deployment on its own.
  *
- * Nearly every cold start finds everything present and costs one SELECT. A dish
- * the restaurant has retired (inactive) still counts as present, so this never
- * brings it back; only a dish the database has never seen triggers an import.
+ * It also runs when a dish still on the menu has a new price or photo in the
+ * shipped files (the dessert photos reached a database that already had the
+ * desserts this way).
+ *
+ * Nearly every cold start finds everything current and costs one SELECT. A dish
+ * the restaurant has retired (inactive) still counts as present and is never
+ * compared, so this never brings it back.
  */
 export async function syncShippedMenuIfMissing(
   database: AppDatabase,
   menu: ShippedMenu = loadShippedMenu(),
-): Promise<{ imported: boolean; missing: number }> {
-  const result = await database.execute(sql`SELECT external_key FROM menu_items`);
-  const rows =
-    (result as unknown as { rows?: { external_key: string }[] }).rows ?? (result as any);
-  const known = new Set<string>(
-    (Array.isArray(rows) ? rows : []).map((r: { external_key: string }) => r.external_key),
+): Promise<{ imported: boolean; missing: number; changed: number }> {
+  const result = await database.execute(
+    sql`SELECT external_key, is_active, price_cents, image_path FROM menu_items`,
+  );
+  type Row = { external_key: string; is_active: boolean; price_cents: number; image_path: string | null };
+  const rows = (result as unknown as { rows?: Row[] }).rows ?? (result as any);
+  const stored = new Map<string, Row>(
+    (Array.isArray(rows) ? (rows as Row[]) : []).map((r) => [r.external_key, r]),
   );
 
-  const missing = [...menu.food.items, ...menu.drinks.items].filter(
-    (i) => !known.has(i.externalKey),
-  ).length;
-  if (missing === 0) return { imported: false, missing: 0 };
+  let missing = 0;
+  let changed = 0;
+  for (const item of [...menu.food.items, ...menu.drinks.items]) {
+    const row = stored.get(item.externalKey);
+    if (!row) missing += 1;
+    // A retired dish is left alone: re-importing would put it back on the menu.
+    else if (
+      row.is_active &&
+      (Number(row.price_cents) !== item.priceCents ||
+        (row.image_path ?? null) !== photoFor(menu.photos, item.dishNumber))
+    ) {
+      changed += 1;
+    }
+  }
+  if (missing === 0 && changed === 0) return { imported: false, missing: 0, changed: 0 };
 
-  await applyShippedMenu(database, menu);
-  return { imported: true, missing };
+  await applyShippedMenu(database, menu, { reactivate: false });
+  return { imported: true, missing, changed };
 }

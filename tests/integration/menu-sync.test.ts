@@ -41,7 +41,11 @@ describe('loading the shipped menu on boot', () => {
     await db.update(menuItems).set({ isAvailable: false }).where(eq(menuItems.externalKey, soldOutKey));
 
     const result = await syncShippedMenuIfMissing(db, winterthur);
-    expect(result).toEqual({ imported: true, missing: winterthur.food.items.length - before.food.items.length });
+    expect(result).toEqual({
+      imported: true,
+      missing: winterthur.food.items.length - before.food.items.length,
+      changed: 0,
+    });
 
     const thai = await db.select().from(menuCategories).where(like(menuCategories.slug, 'thai-%'));
     expect(thai.length).toBe(winterthur.food.categories.length - before.food.categories.length);
@@ -51,14 +55,39 @@ describe('loading the shipped menu on boot', () => {
   });
 
   it('does nothing when every shipped dish is already there', async () => {
-    expect(await syncShippedMenuIfMissing(db, winterthur)).toEqual({ imported: false, missing: 0 });
+    expect(await syncShippedMenuIfMissing(db, winterthur)).toEqual({ imported: false, missing: 0, changed: 0 });
   });
 
   it('does not bring back a dish the restaurant retired', async () => {
     const key = winterthur.food.items[1]!.externalKey;
     await db.update(menuItems).set({ isActive: false }).where(eq(menuItems.externalKey, key));
-    expect(await syncShippedMenuIfMissing(db, winterthur)).toEqual({ imported: false, missing: 0 });
+    expect(await syncShippedMenuIfMissing(db, winterthur)).toEqual({ imported: false, missing: 0, changed: 0 });
     const [row] = await db.select().from(menuItems).where(eq(menuItems.externalKey, key));
+    expect(row!.isActive).toBe(false);
+  });
+
+  it('brings a new photo or price to a dish still on the menu', async () => {
+    const key = winterthur.food.items[2]!.externalKey;
+    await db.update(menuItems).set({ priceCents: 1, imagePath: null }).where(eq(menuItems.externalKey, key));
+
+    expect(await syncShippedMenuIfMissing(db, winterthur)).toEqual({ imported: true, missing: 0, changed: 1 });
+    const [row] = await db.select().from(menuItems).where(eq(menuItems.externalKey, key));
+    expect(row!.priceCents).toBe(winterthur.food.items[2]!.priceCents);
+  });
+
+  it('never compares, or brings back, a retired dish', async () => {
+    const key = winterthur.food.items[3]!.externalKey;
+    await db.update(menuItems).set({ isActive: false, priceCents: 1 }).where(eq(menuItems.externalKey, key));
+    expect(await syncShippedMenuIfMissing(db, winterthur)).toEqual({ imported: false, missing: 0, changed: 0 });
+  });
+
+  it('keeps a retired dish retired when another dish triggers an import', async () => {
+    const retired = winterthur.food.items[3]!.externalKey;
+    const other = winterthur.food.items[4]!.externalKey;
+    await db.update(menuItems).set({ priceCents: 1 }).where(eq(menuItems.externalKey, other));
+
+    expect(await syncShippedMenuIfMissing(db, winterthur)).toMatchObject({ imported: true, changed: 1 });
+    const [row] = await db.select().from(menuItems).where(eq(menuItems.externalKey, retired));
     expect(row!.isActive).toBe(false);
   });
 });

@@ -53,6 +53,8 @@ Copy `.env.example`. Generate each secret with `openssl rand -base64 48`.
 | `NEXT_PUBLIC_RESTAURANT_LOCATION` | no | `oerlikon` (default) or `winterthur`. Picks the Thai menu, the Saturday menu and how guests pay. Read at **build** time |
 | `MENU_SYNC_ON_BOOT` | no | Set to `0` to stop the site importing, on its first request after a deploy, any shipped dish the database has never seen (e.g. a newly added menu). `/api/admin/setup` still re-imports everything on demand |
 | `NEXT_PUBLIC_RESTAURANT_TIMEZONE` | no | Default `Europe/Zurich` (confirm — open question E8) |
+| `STAFF_PIN` | for the staff screen | The PIN staff type at `/staff` (Winterthur). Keep it here, never in the repository, which is public. Without it staff sign-in is off |
+| `AUTH_SECRET` | for the staff screen | Signs the staff sign-in cookie (`openssl rand -base64 48`). Changing it signs everyone out |
 | `SEED_ALLOW_PROD` | no | Guard; the demo seed refuses a real database without it |
 
 Secrets come from the host's secret store. Never commit a filled-in `.env`.
