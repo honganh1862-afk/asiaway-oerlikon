@@ -18,9 +18,11 @@
     { "tableNumber": "30", "area": "OUTSIDE" },
     { "tableNumber": "31", "area": "OUTSIDE" },
     { "tableNumber": "32", "area": "OUTSIDE" },
+    { "tableNumber": "33", "area": "OUTSIDE" },
     { "tableNumber": "50", "area": "INSIDE" },
     { "tableNumber": "51", "area": "INSIDE" },
     { "tableNumber": "52", "area": "INSIDE" },
-    { "tableNumber": "53", "area": "INSIDE" }
+    { "tableNumber": "53", "area": "INSIDE" },
+    { "tableNumber": "54", "area": "INSIDE" }
   ]
 }
