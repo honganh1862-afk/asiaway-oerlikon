@@ -1,6 +1,7 @@
 # Desserts, wine and tea — review sheet
 
-Transcribed from photos of the printed cards in Winterthur, and served in
+Transcribed from photos of the printed cards in Winterthur and checked against
+the final dessert card (Asiaway_Dessertkarte_IH.pdf), which matches it. Served in
 **both restaurants** (`dessertMenu` and `wineAndTea` in
 `src/config/restaurant.ts`), at the same prices.
 
@@ -28,6 +29,11 @@ German; the English and Vietnamese descriptions are translations to check.
   drinks (the app has 5.30 for 50 cl) and 8.00 for a 33 cl drink (Yuzu Lime
   Lemonade is 7.00). Its names were out of the photo, so nothing was changed:
   send a photo of the whole page.
+
+- **Mochi photo.** The final dessert card's mochi photo shows a grey, a yellow
+  and a white mochi. Say which flavours they are (sesame, mango and coconut?)
+  and it goes on those; until then no mochi has a photo, so a sesame one is
+  never shown on another flavour. The ice cream page has no usable photo.
 
 ## Adapted from the print — please confirm
 

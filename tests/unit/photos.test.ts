@@ -10,14 +10,15 @@ const manifest = loadPhotoManifest();
 const menu = parseMenuCsv(
   readFileSync(resolve(process.cwd(), 'data/menu_trilingual_EN_DE_VI.csv'), 'utf8'),
 );
-// Winterthur's full food: the Vietnamese menu and the Thai one.
-const bothMenus = loadFoodMenus(resolve(process.cwd(), 'data'), { thai: true });
+// Winterthur's full food: the Vietnamese menu, the Thai one and the desserts.
+const bothMenus = loadFoodMenus(resolve(process.cwd(), 'data'), { thai: true, desserts: true });
 
 describe('dish photographs', () => {
-  it('maps 38 photos — 17 Vietnamese, 21 Thai — all of which exist on disk', () => {
+  it('maps 44 photos — 17 Vietnamese, 6 desserts, 21 Thai — all of which exist on disk', () => {
     const entries = Object.entries(manifest.photos);
-    expect(entries).toHaveLength(38);
+    expect(entries).toHaveLength(44);
     expect(entries.filter(([dish]) => parseFloat(dish) >= 200)).toHaveLength(21);
+    expect(entries.filter(([dish]) => parseFloat(dish) >= 130 && parseFloat(dish) < 140)).toHaveLength(6);
     for (const [dish, path] of entries) {
       expect(existsSync(resolve(process.cwd(), 'public', path.slice(1))), `${dish}: ${path}`).toBe(
         true,
@@ -39,6 +40,17 @@ describe('dish photographs', () => {
     expect(photoFor(manifest, '12.2')).toBe('/images/menu/dish-12.2.jpg');
     for (const other of ['12.1', '12.3', '12.4']) {
       expect(photoFor(manifest, other), other).toBeNull();
+    }
+  });
+
+  it('gives the desserts their photos from the dessert card, but no mochi or ice cream a guess', () => {
+    for (const dish of ['130', '131', '132', '133', '134', '135']) {
+      expect(photoFor(manifest, dish), dish).toBe(`/images/menu/dish-${dish}.jpg`);
+    }
+    // The mochi photo shows three flavours that cannot be told for sure, one
+    // of them perhaps sesame (an allergen); the ice cream page has no photo.
+    for (const dish of ['136.1', '136.2', '136.3', '136.4', '136.5', '137.1', '137.2', '137.3']) {
+      expect(photoFor(manifest, dish), dish).toBeNull();
     }
   });
 
