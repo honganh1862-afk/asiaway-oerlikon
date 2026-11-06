@@ -34,7 +34,8 @@ export const DRINKS_CSV_COLUMNS = {
 } as const;
 
 /**
- * Categories in printed order, numbered after the food (which occupies 1–5).
+ * Categories in printed order. Drinks have their own tab, so these numbers only
+ * order the drinks among themselves.
  *
  * The German and Vietnamese category names are translations of the English
  * headings, exactly as for the food menu, and are flagged for restaurant review.
@@ -89,13 +90,48 @@ export const DRINK_CATEGORY_META: Readonly<Record<string, CategoryMeta>> = {
     nameVi: 'Bia',
     sortOrder: 15,
   },
+  // The wine list and the teas (data/wine_and_tea_list.csv), served where the
+  // restaurant profile says so (wineAndTea). Wines come after the beer, as in
+  // the printed beverage book.
+  'Sparkling Wine': {
+    slug: 'sparkling-wine',
+    kind: 'DRINK',
+    nameEn: 'Sparkling Wine',
+    nameDe: 'Schaumwein',
+    nameVi: 'Rượu vang sủi',
+    sortOrder: 16,
+  },
+  'White Wine': {
+    slug: 'white-wine',
+    kind: 'DRINK',
+    nameEn: 'White Wine',
+    nameDe: 'Weisswein',
+    nameVi: 'Rượu vang trắng',
+    sortOrder: 17,
+  },
+  'Rosé Wine': {
+    slug: 'rose-wine',
+    kind: 'DRINK',
+    nameEn: 'Rosé Wine',
+    nameDe: 'Roséwein',
+    nameVi: 'Rượu vang hồng',
+    sortOrder: 18,
+  },
+  'Red Wine': {
+    slug: 'red-wine',
+    kind: 'DRINK',
+    nameEn: 'Red Wine',
+    nameDe: 'Rotwein',
+    nameVi: 'Rượu vang đỏ',
+    sortOrder: 19,
+  },
   'Rice Wine': {
     slug: 'rice-wine',
     kind: 'DRINK',
     nameEn: 'Rice Wine',
     nameDe: 'Reiswein',
     nameVi: 'Rượu',
-    sortOrder: 16,
+    sortOrder: 20,
   },
   Coffee: {
     slug: 'coffee',
@@ -103,7 +139,15 @@ export const DRINK_CATEGORY_META: Readonly<Record<string, CategoryMeta>> = {
     nameEn: 'Coffee',
     nameDe: 'Kaffee',
     nameVi: 'Cà phê',
-    sortOrder: 17,
+    sortOrder: 21,
+  },
+  Tea: {
+    slug: 'tea',
+    kind: 'DRINK',
+    nameEn: 'Tea',
+    nameDe: 'Tee',
+    nameVi: 'Trà',
+    sortOrder: 22,
   },
 };
 
@@ -139,6 +183,15 @@ export function parseDrinksCsv(csvText: string): ImportedDrinks {
 
   if (rows.length === 0) throw new Error('Drinks CSV contains no data rows');
 
+  // A wine sold by the glass and by the bottle is one name on two rows. Those
+  // rows are told apart by their volume; every other drink keeps the plain
+  // category:name key it has always had, so re-importing creates no duplicates.
+  const nameCounts = new Map<string, number>();
+  for (const row of rows) {
+    const id = `${(row[DRINKS_CSV_COLUMNS.category] ?? '').trim()}::${slugify(row[DRINKS_CSV_COLUMNS.name] ?? '')}`;
+    nameCounts.set(id, (nameCounts.get(id) ?? 0) + 1);
+  }
+
   const seenKeys = new Set<string>();
   const items: ImportedMenuItem[] = rows.map((row, index) => {
     const lineNo = index + 2;
@@ -153,7 +206,10 @@ export function parseDrinksCsv(csvText: string): ImportedDrinks {
 
     const name = required(row, DRINKS_CSV_COLUMNS.name, lineNo);
     const volume = (row[DRINKS_CSV_COLUMNS.volume] ?? '').trim() || null;
-    const externalKey = `${meta.slug}:${slugify(name)}`;
+    const repeated = (nameCounts.get(`${category}::${slugify(name)}`) ?? 0) > 1;
+    const externalKey = repeated
+      ? `${meta.slug}:${slugify(name)}:${slugify(volume ?? '')}`
+      : `${meta.slug}:${slugify(name)}`;
 
     if (seenKeys.has(externalKey)) {
       throw new Error(`Drinks CSV line ${lineNo}: duplicate item "${name}" in ${category}`);
@@ -194,6 +250,29 @@ export function parseDrinksCsv(csvText: string): ImportedDrinks {
       withVolume: items.filter((i) => i.volume).length,
       withAllergens: items.filter((i) => i.allergenCodes.length > 0).length,
       withoutAllergens: items.filter((i) => i.allergenCodes.length === 0).length,
+    },
+  };
+}
+
+/** Two drinks lists served together, e.g. the drinks and the wine list. */
+export function mergeDrinks(a: ImportedDrinks, b: ImportedDrinks): ImportedDrinks {
+  const keys = new Set(a.items.map((i) => i.externalKey));
+  const clash = b.items.find((i) => keys.has(i.externalKey));
+  if (clash) throw new Error(`Drink "${clash.nameEn}" is listed twice in ${clash.categorySlug}`);
+
+  const categories = [...a.categories, ...b.categories.filter((c) => !a.categories.includes(c))].sort(
+    (x, y) => x.sortOrder - y.sortOrder,
+  );
+  const offset = a.items.length;
+  return {
+    categories,
+    items: [...a.items, ...b.items.map((i) => ({ ...i, sortOrder: i.sortOrder + offset }))],
+    stats: {
+      csvRows: a.stats.csvRows + b.stats.csvRows,
+      itemsProduced: a.stats.itemsProduced + b.stats.itemsProduced,
+      withVolume: a.stats.withVolume + b.stats.withVolume,
+      withAllergens: a.stats.withAllergens + b.stats.withAllergens,
+      withoutAllergens: a.stats.withoutAllergens + b.stats.withoutAllergens,
     },
   };
 }

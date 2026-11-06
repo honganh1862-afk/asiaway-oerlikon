@@ -51,6 +51,7 @@ Copy `.env.example`. Generate each secret with `openssl rand -base64 48`.
 | `CRON_SECRET` | yes | Protects `/api/admin/setup`; without it the endpoint refuses everything |
 | `APP_BASE_URL` | no | Public HTTPS address. `npm run qr` defaults to each restaurant's Vercel address |
 | `NEXT_PUBLIC_RESTAURANT_LOCATION` | no | `oerlikon` (default) or `winterthur`. Picks the Thai menu, the Saturday menu and how guests pay. Read at **build** time |
+| `MENU_SYNC_ON_BOOT` | no | Set to `0` to stop the site importing, on its first request after a deploy, any shipped dish the database has never seen (e.g. a newly added menu). `/api/admin/setup` still re-imports everything on demand |
 | `NEXT_PUBLIC_RESTAURANT_TIMEZONE` | no | Default `Europe/Zurich` (confirm — open question E8) |
 | `SEED_ALLOW_PROD` | no | Guard; the demo seed refuses a real database without it |
 

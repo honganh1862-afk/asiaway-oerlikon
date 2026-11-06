@@ -88,6 +88,16 @@ export const CATEGORY_META: Readonly<Record<string, CategoryMeta>> = {
     nameVi: 'Cá & cà ri',
     sortOrder: 5,
   },
+  // The dessert card (data/dessert_menu_EN_DE_VI.csv), numbered on from the
+  // Vietnamese menu and served where the restaurant profile says so.
+  Dessert: {
+    slug: 'dessert',
+    kind: 'FOOD',
+    nameEn: 'Desserts',
+    nameDe: 'Desserts',
+    nameVi: 'Tráng miệng',
+    sortOrder: 6,
+  },
 
   // The Thai menu (data/thai_menu_EN_DE_VI.csv), served in Winterthur only.
   // `thai-` slugs are what put these categories on the guest's Thai tab

@@ -4,6 +4,21 @@ import Link from 'next/link';
 import { useCustomer } from '../../components/customer/CustomerProvider';
 import { GuestJourney, PayPrompt } from '../../components/customer/GuestJourney';
 import { RESTAURANT } from '../../config/restaurant';
+import { useFoodMenus } from '../../components/customer/useMenu';
+import type { FoodMenus } from '../../domain/menu/menus';
+
+const CHOOSER_TITLE = {
+  BOTH: 'choose.title.both',
+  VIETNAMESE: 'choose.title.vietnamese',
+  THAI: 'choose.title.thai',
+} as const satisfies Record<FoodMenus, string>;
+
+const dish = (n: string) => `/images/menu/dish-${n}-480.webp`;
+const STRIP: Record<FoodMenus, string[]> = {
+  BOTH: [dish('14'), dish('43'), dish('200')],
+  VIETNAMESE: [dish('14'), dish('43'), dish('17')],
+  THAI: [dish('200'), dish('220'), dish('224')],
+};
 
 /**
  * Where the table's QR code lands: the two ways to read the menu.
@@ -13,13 +28,14 @@ import { RESTAURANT } from '../../config/restaurant';
  */
 export default function MenuChooserPage() {
   const { t } = useCustomer();
+  const menus = useFoodMenus();
 
   return (
     <div className="space-y-5">
       <header>
         <p className="h-label">{t('choose.welcome')}</p>
         <h1 className="mt-1 text-2xl font-semibold leading-tight">
-          {RESTAURANT.thaiMenu ? t('choose.title.both') : t('choose.title.vietnamese')}
+          {t(CHOOSER_TITLE[RESTAURANT.thaiMenu ? menus : 'VIETNAMESE'])}
         </h1>
       </header>
 
@@ -59,12 +75,8 @@ export default function MenuChooserPage() {
       >
         {/* A strip of dish photos, the way the modern menu opens. */}
         <div className="grid h-28 grid-cols-3 gap-0.5 overflow-hidden bg-surface-sunken">
-          {/* A Thai dish only where the Thai menu is served. */}
-          {[
-            '/images/menu/dish-14-480.webp',
-            '/images/menu/dish-43-480.webp',
-            RESTAURANT.thaiMenu ? '/images/menu/dish-200-480.webp' : '/images/menu/dish-17-480.webp',
-          ].map((src) => (
+          {/* Dishes from the menus this table is given. */}
+          {STRIP[RESTAURANT.thaiMenu ? menus : 'VIETNAMESE'].map((src) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={src} src={src} alt="" className="h-full w-full object-cover" />
           ))}

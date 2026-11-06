@@ -8,12 +8,14 @@ import { PayPrompt } from '../../../components/customer/GuestJourney';
 import { MenuStyleSwitch } from '../../../components/customer/MenuStyleSwitch';
 import {
   menuTabs,
+  openTab,
   readMenuTab,
+  useFoodMenus,
   useMenu,
   writeMenuTab,
   type Category,
 } from '../../../components/customer/useMenu';
-import { menuTabFor, type MenuTab } from '../../../domain/menu/menus';
+import { categoriesOnTab, type MenuTab } from '../../../domain/menu/menus';
 import { formatMoney } from '../../../lib/format';
 
 /** The modern menu: one scrolling list per tab, photographed dishes first. */
@@ -29,10 +31,11 @@ export default function ModernMenuPage() {
     writeMenuTab(next);
   };
 
-  const tabs = menuTabs(categories, t);
-  // A tab remembered from the other view may not exist here (no Thai menu).
-  const tab = tabs.some((x) => x.id === chosenTab) ? chosenTab : 'FOOD';
-  const shown = (categories ?? []).filter((c) => menuTabFor(c) === tab);
+  const menus = useFoodMenus();
+  const tabs = menuTabs(categories, t, menus);
+  // A tab remembered from the other view may not exist at this table.
+  const tab = openTab(chosenTab, tabs);
+  const shown = categoriesOnTab(categories ?? [], tab);
   const sectionId = (category: Category) => `cat-${category.slug}`;
 
   // Which category the guest is reading, so the bar can show where they are.

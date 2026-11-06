@@ -6,11 +6,13 @@ import { MenuBook } from '../../../components/customer/MenuBook';
 import { MenuStyleSwitch } from '../../../components/customer/MenuStyleSwitch';
 import {
   menuTabs,
+  openTab,
   readMenuTab,
+  useFoodMenus,
   useMenu,
   writeMenuTab,
 } from '../../../components/customer/useMenu';
-import { menuTabFor, type MenuTab } from '../../../domain/menu/menus';
+import { categoriesOnTab, type MenuTab } from '../../../domain/menu/menus';
 
 /** The classic menu: one book per printed menu, turned page by page. */
 export default function ClassicMenuPage() {
@@ -20,11 +22,12 @@ export default function ClassicMenuPage() {
 
   useEffect(() => setChosenTab(readMenuTab()), []);
 
-  const tabs = menuTabs(categories, t);
-  // A tab remembered from the other view may not exist here (no Thai menu).
-  const tab = tabs.some((x) => x.id === chosenTab) ? chosenTab : 'FOOD';
+  const menus = useFoodMenus();
+  const tabs = menuTabs(categories, t, menus);
+  // A tab remembered from the other view may not exist at this table.
+  const tab = openTab(chosenTab, tabs);
   const shown = useMemo(
-    () => (categories ?? []).filter((c) => menuTabFor(c) === tab),
+    () => categoriesOnTab(categories ?? [], tab),
     [categories, tab],
   );
 

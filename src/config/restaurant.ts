@@ -32,6 +32,18 @@ export interface RestaurantProfile {
    */
   readonly thaiMenu: boolean;
   /**
+   * Whether the table number picks the food menu: 1xx Vietnamese, 2xx both,
+   * 3xx Thai (domain/menu/menus.ts). Winterthur seats its guests this way.
+   */
+  readonly menuByTable: boolean;
+  /** The dessert card, n° 130–137. Served in both restaurants. */
+  readonly dessertMenu: boolean;
+  /**
+   * The wine list (sparkling, white, rosé and red, by the glass and the bottle)
+   * and the teas from the beverage book. Served in both restaurants.
+   */
+  readonly wineAndTea: boolean;
+  /**
    * Where a guest who enjoyed the visit can leave a review: the restaurant's
    * Google Maps listing. Null where none has been supplied, and then the menu
    * asks for none.
@@ -45,6 +57,9 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     counterPlace: null,
     thaiMenu: false,
+    menuByTable: false,
+    dessertMenu: true,
+    wineAndTea: true,
     // "Asiaway" in Zürich-Oerlikon on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/nFY8toA4d164p12q7',
   },
@@ -53,6 +68,9 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     counterPlace: 'stairs',
     thaiMenu: true,
+    menuByTable: true,
+    dessertMenu: true,
+    wineAndTea: true,
     // "Asiaway Restaurant Winterthur" on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/2zNqQCJNHLKMi4WA8',
   },
