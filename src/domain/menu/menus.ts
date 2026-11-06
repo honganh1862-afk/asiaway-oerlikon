@@ -12,7 +12,7 @@ export function isThaiCategory(slug: string): boolean {
   return slug.startsWith(THAI_SLUG_PREFIX);
 }
 
-export type MenuTab = 'FOOD' | 'THAI' | 'DRINK';
+export type MenuTab = 'FOOD' | 'THAI' | 'DESSERT' | 'DRINK';
 
 /**
  * Which food menus a table is given. In Winterthur the first digit of the
@@ -40,32 +40,21 @@ export function foodMenusForTable(tableNumber: string | null, byTable: boolean):
 }
 
 /**
- * Food served after either menu: the desserts are on the Vietnamese tab and on
- * the Thai tab alike, so every table finds them whichever menu it has.
+ * The desserts follow either menu, so they have a tab of their own that every
+ * table sees, between the food and the drinks.
  */
-const SHARED_FOOD_SLUGS: ReadonlySet<string> = new Set(['dessert']);
+const DESSERT_SLUGS: ReadonlySet<string> = new Set(['dessert']);
 
-/** The tab a category belongs to; for desserts, the Vietnamese one. */
 export function menuTabFor(category: { slug: string; kind: 'FOOD' | 'DRINK' }): MenuTab {
   if (category.kind === 'DRINK') return 'DRINK';
+  if (DESSERT_SLUGS.has(category.slug)) return 'DESSERT';
   return isThaiCategory(category.slug) ? 'THAI' : 'FOOD';
 }
 
-/** Whether a category is shown on a tab: its own, and for desserts both food tabs. */
-export function isOnTab(category: { slug: string; kind: 'FOOD' | 'DRINK' }, tab: MenuTab): boolean {
-  if (category.kind === 'FOOD' && SHARED_FOOD_SLUGS.has(category.slug)) return tab !== 'DRINK';
-  return menuTabFor(category) === tab;
-}
-
-/**
- * The categories shown on a tab, in menu order, with the desserts last: they
- * close the Thai menu as they close the Vietnamese one.
- */
+/** The categories shown on a tab, in menu order. */
 export function categoriesOnTab<C extends { slug: string; kind: 'FOOD' | 'DRINK' }>(
   categories: readonly C[],
   tab: MenuTab,
 ): C[] {
-  const shown = categories.filter((c) => isOnTab(c, tab));
-  const shared = (c: C) => (c.kind === 'FOOD' && SHARED_FOOD_SLUGS.has(c.slug) ? 1 : 0);
-  return shown.map((c, i) => [c, i] as const).sort((a, b) => shared(a[0]) - shared(b[0]) || a[1] - b[1]).map(([c]) => c);
+  return categories.filter((c) => menuTabFor(c) === tab);
 }

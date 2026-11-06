@@ -57,6 +57,7 @@ const PHOTO_SIZES = '(max-width: 28rem) 100vw, 28rem';
 const COVER_TITLE: Record<MenuTab, MessageKey> = {
   FOOD: 'book.cover.vietnamese',
   THAI: 'book.cover.thai',
+  DESSERT: 'book.cover.desserts',
   DRINK: 'book.cover.drinks',
 };
 
@@ -75,9 +76,9 @@ export function MenuBook({
   quantityOf: (menuItemId: string) => number;
   onAdd: (item: MenuItem) => void;
 }) {
-  // The Vietnamese name sits under the dish on the Vietnamese menu only, and
-  // not when the guest is already reading in Vietnamese.
-  const showVi = tab === 'FOOD' && locale !== 'vi';
+  // The Vietnamese name sits under the dish on the Vietnamese menu and the
+  // desserts only, and not when the guest is already reading in Vietnamese.
+  const showVi = (tab === 'FOOD' || tab === 'DESSERT') && locale !== 'vi';
   // Drinks show allergen codes only where they apply, as on the printed list.
   const drinks = tab === 'DRINK';
 
