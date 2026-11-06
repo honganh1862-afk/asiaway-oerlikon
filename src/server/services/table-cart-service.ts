@@ -362,3 +362,31 @@ export async function updateTable(
     })
     .where(eq(restaurantTables.id, table.id));
 }
+
+/**
+ * Adds every table on the restaurant's list (data/<restaurant>-tables.json)
+ * that the database has never seen, so a table added to the list (and printed
+ * on a card) works on the next deploy without anyone running setup. A table
+ * the staff removed is known, and stays removed; nothing is ever deleted.
+ */
+export async function addMissingTables(
+  db: Db,
+  listed: readonly { tableNumber: string; area?: 'INSIDE' | 'OUTSIDE' | null }[],
+): Promise<string[]> {
+  const known = new Set((await db.select({ n: restaurantTables.tableNumber }).from(restaurantTables)).map((r) => r.n));
+  const added: string[] = [];
+  for (const table of listed) {
+    if (known.has(table.tableNumber) || !isTableNumber(table.tableNumber)) continue;
+    await db
+      .insert(restaurantTables)
+      .values({
+        tableNumber: table.tableNumber,
+        displayName: `Table ${table.tableNumber}`,
+        qrToken: generateQrToken(),
+        area: table.area ?? null,
+      })
+      .onConflictDoNothing();
+    added.push(table.tableNumber);
+  }
+  return added;
+}
