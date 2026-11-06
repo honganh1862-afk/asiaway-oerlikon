@@ -31,6 +31,11 @@ export interface RestaurantProfile {
    * both, each on its own tab; Oerlikon has the Vietnamese menu only.
    */
   readonly thaiMenu: boolean;
+  /**
+   * Whether the table number picks the food menu: 1xx Vietnamese, 2xx both,
+   * 3xx Thai (domain/menu/menus.ts). Winterthur seats its guests this way.
+   */
+  readonly menuByTable: boolean;
   /** The dessert card, n° 130–137. Winterthur's; Oerlikon has supplied none. */
   readonly dessertMenu: boolean;
   /**
@@ -52,6 +57,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     counterPlace: null,
     thaiMenu: false,
+    menuByTable: false,
     dessertMenu: false,
     wineAndTea: false,
     // "Asiaway" in Zürich-Oerlikon on Google Maps.
@@ -62,6 +68,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     payment: 'counter',
     counterPlace: 'stairs',
     thaiMenu: true,
+    menuByTable: true,
     dessertMenu: true,
     wineAndTea: true,
     // "Asiaway Restaurant Winterthur" on Google Maps.

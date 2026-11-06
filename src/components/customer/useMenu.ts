@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { menuTabFor, type MenuTab } from '../../domain/menu/menus';
+import { foodMenusForTable, menuTabFor, type FoodMenus, type MenuTab } from '../../domain/menu/menus';
+import { readTableCookie } from '../../domain/table';
+import { RESTAURANT } from '../../config/restaurant';
 import type { Locale } from '../../i18n/locales';
 import type { Translator } from '../../i18n';
 
@@ -86,21 +88,40 @@ function keepMenu(locale: Locale, categories: Category[]): void {
 }
 
 /**
- * Where both printed menus are served (Winterthur), each gets its own tab:
- * Vietnamesisch · Thai · Getränke. Elsewhere it stays Speisen · Getränke.
+ * The food menus this guest's table is given (1xx Vietnamese, 2xx both, 3xx
+ * Thai in Winterthur), read from the table card's cookie. Until the cookie has
+ * been read, and for a guest who scanned no card, that is both.
  */
-export function menuTabs(categories: Category[] | null, t: Translator): { id: MenuTab; label: string }[] {
+export function useFoodMenus(): FoodMenus {
+  const [table, setTable] = useState<string | null>(null);
+  useEffect(() => setTable(readTableCookie(document.cookie)), []);
+  return foodMenusForTable(table, RESTAURANT.menuByTable);
+}
+
+/**
+ * The tabs a guest sees. Where both printed menus are served (Winterthur) each
+ * gets its own: Vietnamesisch · Thai · Getränke, or just the one the table is
+ * given. Elsewhere it stays Speisen · Getränke.
+ */
+export function menuTabs(
+  categories: Category[] | null,
+  t: Translator,
+  menus: FoodMenus = 'BOTH',
+): { id: MenuTab; label: string }[] {
   const hasThai = (categories ?? []).some((c) => menuTabFor(c) === 'THAI');
-  return hasThai
-    ? [
-        { id: 'FOOD', label: t('menu.vietnamese') },
-        { id: 'THAI', label: t('menu.thai') },
-        { id: 'DRINK', label: t('menu.drinks') },
-      ]
-    : [
-        { id: 'FOOD', label: t('menu.food') },
-        { id: 'DRINK', label: t('menu.drinks') },
-      ];
+  const drinks = { id: 'DRINK' as const, label: t('menu.drinks') };
+  if (!hasThai) return [{ id: 'FOOD', label: t('menu.food') }, drinks];
+
+  const vietnamese = { id: 'FOOD' as const, label: t('menu.vietnamese') };
+  const thai = { id: 'THAI' as const, label: t('menu.thai') };
+  if (menus === 'VIETNAMESE') return [vietnamese, drinks];
+  if (menus === 'THAI') return [thai, drinks];
+  return [vietnamese, thai, drinks];
+}
+
+/** The tab to open: the one the guest last had, if this table has it, else the first. */
+export function openTab(chosen: MenuTab, tabs: readonly { id: MenuTab }[]): MenuTab {
+  return tabs.some((x) => x.id === chosen) ? chosen : tabs[0]!.id;
 }
 
 /** The tab a guest last had open, kept for the visit so switching views keeps their place. */
