@@ -146,10 +146,23 @@ export function CustomerProvider({
       setLocaleState(storedLocale);
       document.documentElement.lang = storedLocale;
     }
-    const table = guestCart && hasStaffScreen() ? readTableCookie(document.cookie) : null;
-    setSharedTable(table);
-    if (!table && guestCart) setCart(read<CartLine[]>(CART_KEY, []));
+    if (!guestCart) {
+      setHydrated(true);
+      return;
+    }
+    // This phone's own cart first; the table's shared cart once the server
+    // confirms the table, which then takes this cart over (below). A table the
+    // restaurant does not have (an old or mistyped link) stays a cart on this
+    // phone, as where there is no staff screen.
+    setCart(read<CartLine[]>(CART_KEY, []));
     setHydrated(true);
+    const table = hasStaffScreen() ? readTableCookie(document.cookie) : null;
+    if (!table) return;
+    fetch(`/api/table/${encodeURIComponent(table)}/cart`, { cache: 'no-store' })
+      .then((response) => {
+        if (response.status !== 404) setSharedTable(table);
+      })
+      .catch(() => setSharedTable(table));
   }, [guestCart]);
 
   // A cart on this phone only is kept on this phone.
@@ -170,6 +183,12 @@ export function CustomerProvider({
       const response = await fetch(`/api/table/${encodeURIComponent(sharedTable)}/cart?lang=${locale}`, {
         cache: 'no-store',
       });
+      // A table the restaurant does not have (an old or mistyped link): this
+      // phone keeps its own cart, as where there is no staff screen.
+      if (response.status === 404) {
+        setSharedTable(null);
+        return;
+      }
       if (!response.ok) return;
       const data = (await response.json()) as ServerCart;
       if (seen === changes.current && inFlight.current === 0) {

@@ -47,7 +47,7 @@ code still work.
 - **The menu does not load:** check the internet connection on the phone, then
   `/api/health` on the site. Paper menus are the fallback, as the card says.
 
-## The staff screen (Winterthur)
+## The staff screen (Winterthur and Oerlikon)
 
 Open `/staff` on the restaurant's address (for example
 `https://asiaway-winterthur.vercel.app/staff`) and add it to the phone's home
@@ -73,6 +73,9 @@ screen. Tap your name and type the PIN; the sign-in lasts 12 hours.
   table with dishes on it must be cleared first). A removed table can be
   brought back and its printed card works again.
 
-The staff list is `staff` in `src/config/restaurant.ts`; the PIN is the
-`STAFF_PIN` setting on Vercel. After ten wrong PINs from one
+The staff lists are `staff` in `src/config/restaurant.ts`, one per restaurant
+(Oerlikon: Belle); the PIN is each project's `STAFF_PIN` setting on Vercel.
+A table added to `data/<restaurant>-tables.json` is in service after the next
+deploy. A table card for a table the restaurant does not have still opens the
+menu, with a cart on that phone only. After ten wrong PINs from one
 phone, or thirty overall, within 15 minutes, sign-in pauses for a while.

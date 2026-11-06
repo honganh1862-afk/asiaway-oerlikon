@@ -6,6 +6,7 @@ import { menuItems, tableCarts } from '../../src/server/db/schema';
 import { applyShippedMenu, loadShippedMenu } from '../../src/server/menu/sync-menu';
 import { RESTAURANT_PROFILES } from '../../src/config/restaurant';
 import {
+  addMissingTables,
   changeCartLine,
   setAllAtOnce,
   clearTable,
@@ -194,5 +195,30 @@ describe('managing the tables', () => {
   it('brings a removed table back under its number', async () => {
     await createTable(db, { tableNumber: '310' });
     expect((await listTables(db)).find((t) => t.tableNumber === '310')!.isActive).toBe(true);
+  });
+});
+
+describe('tables from the restaurant\'s list', () => {
+  it('adds a listed table the database has never seen, and leaves a removed one removed', async () => {
+    await createTable(db, { tableNumber: '77' });
+    await updateTable(db, '77', { isActive: false });
+
+    const added = await addMissingTables(db, [
+      { tableNumber: '33', area: 'OUTSIDE' },
+      { tableNumber: '54', area: 'INSIDE' },
+      { tableNumber: '77' },
+      { tableNumber: '220' },
+    ]);
+    expect(added).toEqual(['33', '54']);
+
+    const tables = await listTables(db);
+    expect(tables.find((t) => t.tableNumber === '33')).toMatchObject({ area: 'OUTSIDE', isActive: true });
+    expect(tables.find((t) => t.tableNumber === '77')!.isActive).toBe(false);
+    expect(await addMissingTables(db, [{ tableNumber: '33' }])).toEqual([]);
+  });
+
+  it('gives Oerlikon the staff screen too, with its own staff', () => {
+    expect(RESTAURANT_PROFILES.oerlikon.staff).toEqual(['Belle']);
+    expect(RESTAURANT_PROFILES.winterthur.staff).toContain('Edmond');
   });
 });

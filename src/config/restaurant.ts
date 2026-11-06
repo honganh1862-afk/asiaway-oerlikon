@@ -69,7 +69,7 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     wineAndTea: true,
     // "Asiaway" in Zürich-Oerlikon on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/nFY8toA4d164p12q7',
-    staff: [],
+    staff: ['Belle'],
   },
   winterthur: {
     saturdayMenu: false,
