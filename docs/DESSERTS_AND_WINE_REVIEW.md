@@ -30,10 +30,11 @@ German; the English and Vietnamese descriptions are translations to check.
   Lemonade is 7.00). Its names were out of the photo, so nothing was changed:
   send a photo of the whole page.
 
-- **Mochi photo.** The final dessert card's mochi photo shows a grey, a yellow
-  and a white mochi. Say which flavours they are (sesame, mango and coconut?)
-  and it goes on those; until then no mochi has a photo, so a sesame one is
-  never shown on another flavour. The ice cream page has no usable photo.
+- **Mochi flavours.** The restaurant says the mochi photo shows mango,
+  strawberry and coconut, but the card offers Himbeer (raspberry), not
+  strawberry. The photo is on Raspberry, Mango and Coconut (never Sesame or
+  Green Tea). Is the berry mochi raspberry or strawberry? If strawberry, the
+  card and the menu should say so.
 
 ## Adapted from the print — please confirm
 
