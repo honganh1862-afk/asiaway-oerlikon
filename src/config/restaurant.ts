@@ -36,11 +36,11 @@ export interface RestaurantProfile {
    * 3xx Thai (domain/menu/menus.ts). Winterthur seats its guests this way.
    */
   readonly menuByTable: boolean;
-  /** The dessert card, n° 130–137. Winterthur's; Oerlikon has supplied none. */
+  /** The dessert card, n° 130–137. Served in both restaurants. */
   readonly dessertMenu: boolean;
   /**
    * The wine list (sparkling, white, rosé and red, by the glass and the bottle)
-   * and the teas from the beverage book. Winterthur's; Oerlikon has supplied none.
+   * and the teas from the beverage book. Served in both restaurants.
    */
   readonly wineAndTea: boolean;
   /**
@@ -58,8 +58,8 @@ export const RESTAURANT_PROFILES: Readonly<Record<RestaurantLocation, Restaurant
     counterPlace: null,
     thaiMenu: false,
     menuByTable: false,
-    dessertMenu: false,
-    wineAndTea: false,
+    dessertMenu: true,
+    wineAndTea: true,
     // "Asiaway" in Zürich-Oerlikon on Google Maps.
     reviewUrl: 'https://maps.app.goo.gl/nFY8toA4d164p12q7',
   },

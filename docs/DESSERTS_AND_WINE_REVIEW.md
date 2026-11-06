@@ -1,12 +1,10 @@
 # Desserts, wine and tea — review sheet
 
 Transcribed from photos of the printed cards in Winterthur, and served in
-**Winterthur only** (`dessertMenu` and `wineAndTea` in
-`src/config/restaurant.ts`). If Oerlikon serves the same cards, switch them on
-there too.
+**both restaurants** (`dessertMenu` and `wineAndTea` in
+`src/config/restaurant.ts`), at the same prices.
 
-- `data/dessert_menu_EN_DE_VI.csv`: n° 130–137, under *Desserts* at the end of
-  the Vietnamese food tab.
+- `data/dessert_menu_EN_DE_VI.csv`: n° 130–137, on the *Desserts* tab.
 - `data/wine_and_tea_list.csv`: sparkling, white, rosé and red wine, and the
   teas, on the drinks tab. Wines come after the beer.
 

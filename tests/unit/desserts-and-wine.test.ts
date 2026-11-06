@@ -65,18 +65,21 @@ describe('the wine list and teas', () => {
 });
 
 describe('who serves them', () => {
-  it('serves the desserts, the wine and the teas in Winterthur only', () => {
+  it('serves the desserts, the wine and the teas in both restaurants, the Thai menu in Winterthur only', () => {
     const winterthur = loadShippedMenu(dataDir, RESTAURANT_PROFILES.winterthur);
     const oerlikon = loadShippedMenu(dataDir, RESTAURANT_PROFILES.oerlikon);
     const slugs = (m: typeof winterthur) => [...m.food.categories, ...m.drinks.categories].map((c) => c.slug);
 
     for (const slug of ['dessert', 'sparkling-wine', 'white-wine', 'rose-wine', 'red-wine', 'tea']) {
       expect(slugs(winterthur)).toContain(slug);
-      expect(slugs(oerlikon)).not.toContain(slug);
+      expect(slugs(oerlikon)).toContain(slug);
     }
-    // Oerlikon's menu is untouched.
-    expect(oerlikon.drinks.items.map((i) => i.externalKey)).toEqual(
-      parseDrinksCsv(read('asiaway_drinks_menu.csv')).items.map((i) => i.externalKey),
-    );
+    expect(slugs(winterthur).some((s) => s.startsWith('thai-'))).toBe(true);
+    expect(slugs(oerlikon).some((s) => s.startsWith('thai-'))).toBe(false);
+    // Every drink Oerlikon already had keeps its key, so nothing is duplicated.
+    const keys = new Set(oerlikon.drinks.items.map((i) => i.externalKey));
+    for (const drink of parseDrinksCsv(read('asiaway_drinks_menu.csv')).items) {
+      expect(keys.has(drink.externalKey)).toBe(true);
+    }
   });
 });
