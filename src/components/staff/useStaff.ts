@@ -68,7 +68,7 @@ export interface TableOverview {
   tableNumber: string;
   area: 'INSIDE' | 'OUTSIDE' | null;
   isActive: boolean;
-  cart: { count: number; totalCents: number; updatedAt: string } | null;
+  cart: { count: number; totalCents: number; updatedAt: string; secondCourse: number; allAtOnce: boolean } | null;
 }
 
 export interface TableCart {
@@ -76,6 +76,7 @@ export interface TableCart {
   count: number;
   totalCents: number;
   updatedAt: string | null;
+  allAtOnce: boolean;
   lines: {
     menuItemId: string;
     dishNumber: string | null;
@@ -86,6 +87,8 @@ export interface TableCart {
     quantity: number;
     isAvailable: boolean;
     changedBy: string;
+    course: 1 | 2;
+    kind: 'FOOD' | 'DRINK';
   }[];
 }
 

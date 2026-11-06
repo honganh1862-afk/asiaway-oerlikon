@@ -47,7 +47,7 @@ code still work.
 - **The menu does not load:** check the internet connection on the phone, then
   `/api/health` on the site. Paper menus are the fallback, as the card says.
 
-## The staff screen (Winterthur)
+## The staff screen (Winterthur and Oerlikon)
 
 Open `/staff` on the restaurant's address (for example
 `https://asiaway-winterthur.vercel.app/staff`) and add it to the phone's home
@@ -60,13 +60,22 @@ screen. Tap your name and type the PIN; the sign-in lasts 12 hours.
 - Tap a table to see its list, by dish number. Change a quantity with − and +,
   or remove a line. For a guest ordering from the printed menu, open their table
   (under **All tables**) and add the dish by number or name.
+- Each table is served **in courses** (1. Gang, 2. Gang) or **all at once**: the
+  guests choose at the top of their cart, and you can change it on the table's
+  page. In courses, dishes start in the 1. Gang and move with one tap; drinks
+  have no course. The board shows "2nd course: n" or "All at once" per table.
 - Take the order into the till as before: nothing here reaches the kitchen.
+  Send the 1. Gang and drinks now and hold the 2. Gang; release it once the
+  1. Gang is cleared (SOP-01).
 - When the table has paid, tap **Paid — clear table**. The list empties on the
   guests' phones too, ready for the next guests.
 - **Manage tables** adds a table, sets inside or outside, or removes one (a
   table with dishes on it must be cleared first). A removed table can be
   brought back and its printed card works again.
 
-The staff list is `staff` in `src/config/restaurant.ts`; the PIN is the
-`STAFF_PIN` setting on Vercel. After ten wrong PINs from one
+The staff lists are `staff` in `src/config/restaurant.ts`, one per restaurant
+(Oerlikon: Belle); the PIN is each project's `STAFF_PIN` setting on Vercel.
+A table added to `data/<restaurant>-tables.json` is in service after the next
+deploy. A table card for a table the restaurant does not have still opens the
+menu, with a cart on that phone only. After ten wrong PINs from one
 phone, or thirty overall, within 15 minutes, sign-in pauses for a while.

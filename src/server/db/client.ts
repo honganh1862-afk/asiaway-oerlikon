@@ -57,4 +57,5 @@ export const MIGRATION_FILES = [
   '0006_saturday_menu.sql',
   '0012_staff_call.sql',
   '0013_table_carts.sql',
+  '0014_cart_courses.sql',
 ] as const;

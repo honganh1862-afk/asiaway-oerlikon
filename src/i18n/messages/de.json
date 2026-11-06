@@ -142,5 +142,18 @@
   "staff.tables.remove.confirm": "Tisch {table} entfernen? Seine Karte funktioniert erst wieder, wenn er wieder aufgenommen wird.",
   "staff.error.TABLE_EXISTS": "Diesen Tisch gibt es schon.",
   "staff.error.TABLE_IN_USE": "Den Tisch zuerst leeren, dann entfernen.",
-  "staff.error.VALIDATION_FAILED": "Eine Tischnummer hat 1–8 Buchstaben, Ziffern oder Bindestriche."
+  "staff.error.VALIDATION_FAILED": "Eine Tischnummer hat 1–8 Buchstaben, Ziffern oder Bindestriche.",
+  "cart.serve.title": "Wie dürfen wir servieren?",
+  "cart.serve.courses": "In Gängen",
+  "cart.serve.allAtOnce": "Alles auf einmal",
+  "cart.serve.coursesHint": "Gerichte kommen in den 1. Gang. Was später kommen soll, in den 2. Gang verschieben.",
+  "cart.serve.allHint": "Alles wird gebracht, sobald es bereit ist.",
+  "course.1": "1. Gang",
+  "course.2": "2. Gang",
+  "course.food": "Speisen",
+  "course.drinks": "Getränke",
+  "course.toSecond": "Später: 2. Gang",
+  "course.toFirst": "Früher: 1. Gang",
+  "staff.board.second": "2. Gang: {count}",
+  "staff.table.addTo": "Hinzufügen zu"
 }
