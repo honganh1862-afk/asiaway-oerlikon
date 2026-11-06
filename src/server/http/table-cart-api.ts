@@ -4,9 +4,13 @@ import { hasStaffScreen } from '../../config/restaurant';
 import { apiError } from './api';
 
 /** Shared by the guest and the staff cart routes. */
+const Course = z.union([z.literal(1), z.literal(2)]);
+
 export const CartChangeBody = z.union([
-  z.object({ menuItemId: z.string().uuid(), delta: z.number().int().min(-99).max(99) }),
-  z.object({ menuItemId: z.string().uuid(), quantity: z.number().int().min(0).max(99) }),
+  z.object({ menuItemId: z.string().uuid(), delta: z.number().int().min(-99).max(99), course: Course.optional() }),
+  z.object({ menuItemId: z.string().uuid(), quantity: z.number().int().min(0).max(99), course: Course.optional() }),
+  z.object({ menuItemId: z.string().uuid(), from: Course, to: Course }),
+  z.object({ allAtOnce: z.boolean() }),
 ]);
 
 /** Live data: never kept by Vercel or the phone. */

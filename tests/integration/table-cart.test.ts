@@ -6,7 +6,9 @@ import { menuItems, tableCarts } from '../../src/server/db/schema';
 import { applyShippedMenu, loadShippedMenu } from '../../src/server/menu/sync-menu';
 import { RESTAURANT_PROFILES } from '../../src/config/restaurant';
 import {
+  addMissingTables,
   changeCartLine,
+  setAllAtOnce,
   clearTable,
   createTable,
   getTableCart,
@@ -19,6 +21,7 @@ let ctx: TestContext;
 let db: AppDatabase;
 let springRolls: string;
 let pho: string;
+let cola: string;
 
 beforeAll(async () => {
   ctx = await createTestDatabase();
@@ -27,6 +30,7 @@ beforeAll(async () => {
   const items = await db.select().from(menuItems);
   springRolls = items.find((i) => i.dishNumber === '10')!.id;
   pho = items.find((i) => i.dishNumber?.startsWith('40'))!.id;
+  cola = items.find((i) => i.nameEn === 'Coca Cola')!.id;
   await createTable(db, { tableNumber: '220', area: 'INSIDE' });
   await createTable(db, { tableNumber: '310' });
 });
@@ -111,6 +115,60 @@ describe('one shared cart per table', () => {
   });
 });
 
+describe('1. Gang and 2. Gang', () => {
+  it('starts every dish in the first course, and keeps the same dish in both apart', async () => {
+    await createTable(db, { tableNumber: '230' });
+    await changeCartLine(db, '230', { menuItemId: springRolls, delta: 2 }, 'guest');
+    await changeCartLine(db, '230', { menuItemId: springRolls, delta: 1, course: 2 }, 'guest');
+    const lines = (await getTableCart(db, '230', 'en')).lines;
+    expect(lines.map((l) => [l.course, l.quantity])).toEqual([
+      [1, 2],
+      [2, 1],
+    ]);
+  });
+
+  it('moves a dish, all of it, to the other course, joining what is there', async () => {
+    await changeCartLine(db, '230', { menuItemId: springRolls, from: 1, to: 2 }, 'guest');
+    expect((await getTableCart(db, '230', 'en')).lines.map((l) => [l.course, l.quantity])).toEqual([[2, 3]]);
+    await changeCartLine(db, '230', { menuItemId: springRolls, quantity: 1, course: 2 }, { staff: 'Viet' });
+    expect((await getTableCart(db, '230', 'en')).lines[0]).toMatchObject({ course: 2, quantity: 1, changedBy: 'Viet' });
+  });
+
+  it('keeps drinks in the first course: they are served at once', async () => {
+    await changeCartLine(db, '230', { menuItemId: cola, delta: 1, course: 2 }, 'guest');
+    await changeCartLine(db, '230', { menuItemId: cola, from: 1, to: 2 }, 'guest');
+    const drink = (await getTableCart(db, '230', 'en')).lines.find((l) => l.menuItemId === cola)!;
+    expect(drink).toMatchObject({ course: 1, kind: 'DRINK', quantity: 1 });
+  });
+
+  it('tells the staff how much is held for the second course', async () => {
+    expect((await listTables(db)).find((t) => t.tableNumber === '230')!.cart).toMatchObject({
+      count: 2,
+      secondCourse: 1,
+      allAtOnce: false,
+    });
+  });
+
+  it('lets a table ask for everything at once, and back, keeping each dish\'s course', async () => {
+    await setAllAtOnce(db, '230', true);
+    expect((await getTableCart(db, '230', 'en')).allAtOnce).toBe(true);
+    expect((await listTables(db)).find((t) => t.tableNumber === '230')!.cart!.allAtOnce).toBe(true);
+    await setAllAtOnce(db, '230', false);
+    const cart = await getTableCart(db, '230', 'en');
+    expect(cart.allAtOnce).toBe(false);
+    expect(cart.lines.map((l) => [l.menuItemId === cola ? 'cola' : 'rolls', l.course])).toEqual([
+      ['cola', 1],
+      ['rolls', 2],
+    ]);
+  });
+
+  it('starts the next guests with courses again', async () => {
+    await setAllAtOnce(db, '230', true);
+    await clearTable(db, '230', 'April');
+    expect((await getTableCart(db, '230', 'en')).allAtOnce).toBe(false);
+  });
+});
+
 describe('managing the tables', () => {
   it('adds a table, and refuses one already in service', async () => {
     await createTable(db, { tableNumber: '140', area: 'OUTSIDE' });
@@ -137,5 +195,30 @@ describe('managing the tables', () => {
   it('brings a removed table back under its number', async () => {
     await createTable(db, { tableNumber: '310' });
     expect((await listTables(db)).find((t) => t.tableNumber === '310')!.isActive).toBe(true);
+  });
+});
+
+describe('tables from the restaurant\'s list', () => {
+  it('adds a listed table the database has never seen, and leaves a removed one removed', async () => {
+    await createTable(db, { tableNumber: '77' });
+    await updateTable(db, '77', { isActive: false });
+
+    const added = await addMissingTables(db, [
+      { tableNumber: '33', area: 'OUTSIDE' },
+      { tableNumber: '54', area: 'INSIDE' },
+      { tableNumber: '77' },
+      { tableNumber: '220' },
+    ]);
+    expect(added).toEqual(['33', '54']);
+
+    const tables = await listTables(db);
+    expect(tables.find((t) => t.tableNumber === '33')).toMatchObject({ area: 'OUTSIDE', isActive: true });
+    expect(tables.find((t) => t.tableNumber === '77')!.isActive).toBe(false);
+    expect(await addMissingTables(db, [{ tableNumber: '33' }])).toEqual([]);
+  });
+
+  it('gives Oerlikon the staff screen too, with its own staff', () => {
+    expect(RESTAURANT_PROFILES.oerlikon.staff).toEqual(['Belle']);
+    expect(RESTAURANT_PROFILES.winterthur.staff).toContain('Edmond');
   });
 });

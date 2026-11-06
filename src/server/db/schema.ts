@@ -417,6 +417,8 @@ export const tableCarts = pgTable('table_carts', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   clearedAt: timestamp('cleared_at', { withTimezone: true }),
   clearedBy: text('cleared_by'),
+  /** The table wants everything served at once, no second course held back. */
+  allAtOnce: boolean('all_at_once').notNull().default(false),
 });
 
 export const tableCartLines = pgTable(
@@ -428,11 +430,13 @@ export const tableCartLines = pgTable(
     menuItemId: uuid('menu_item_id')
       .notNull()
       .references(() => menuItems.id),
+    /** 1 = first course (1. Gang), 2 = second (2. Gang); drinks are always 1. */
+    course: smallint('course').notNull().default(1),
     quantity: integer('quantity').notNull(),
     changedBy: text('changed_by').notNull(),
     addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ pk: primaryKey({ columns: [t.cartId, t.menuItemId] }) }),
+  (t) => ({ pk: primaryKey({ columns: [t.cartId, t.menuItemId, t.course] }) }),
 );
 
 export const schema = {

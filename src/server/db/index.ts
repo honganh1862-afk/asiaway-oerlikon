@@ -63,6 +63,27 @@ async function create(): Promise<DatabaseHandle> {
       }
     }
 
+    // And the tables on the restaurant's list: one added there (and printed on a
+    // card) is in service after the next deploy.
+    if (process.env.MENU_SYNC_ON_BOOT !== '0') {
+      try {
+        const [{ readFileSync }, { join }, { RESTAURANT_LOCATION }, { addMissingTables }] = await Promise.all([
+          import('node:fs'),
+          import('node:path'),
+          import('../../config/restaurant'),
+          import('../services/table-cart-service'),
+        ]);
+        const file = join(process.cwd(), 'data', `${RESTAURANT_LOCATION}-tables.json`);
+        const { tables } = JSON.parse(readFileSync(file, 'utf8')) as {
+          tables: { tableNumber: string; area?: 'INSIDE' | 'OUTSIDE' | null }[];
+        };
+        const added = await addMissingTables(db, tables);
+        if (added.length > 0) console.info(`[tables] added ${added.join(', ')}`);
+      } catch (error) {
+        console.error('[tables] boot sync failed; serving the tables already in the database', error);
+      }
+    }
+
     return { db, mode: 'postgres', executeMultiple };
   }
 

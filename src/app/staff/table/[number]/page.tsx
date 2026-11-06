@@ -38,7 +38,12 @@ export default function StaffTablePage() {
   );
 }
 
-type Change = { menuItemId: string; delta: number } | { menuItemId: string; quantity: number };
+type Course = 1 | 2;
+type Change =
+  | { menuItemId: string; delta: number; course?: Course }
+  | { menuItemId: string; quantity: number; course?: Course }
+  | { menuItemId: string; from: Course; to: Course }
+  | { allAtOnce: boolean };
 
 function Table() {
   const { t, locale } = useCustomer();
@@ -78,65 +83,101 @@ function Table() {
         <h1 className="font-display text-3xl font-bold">{t('staff.table.title', { table: tableNumber })}</h1>
       </div>
 
+      {cart && (
+        <div className="flex gap-2" role="group" aria-label={t('cart.serve.title')}>
+          {([false, true] as const).map((value) => (
+            <button
+              key={String(value)}
+              type="button"
+              aria-pressed={cart.allAtOnce === value}
+              onClick={() => change({ allAtOnce: value })}
+              className={`min-h-tap flex-1 rounded-xl border px-3 text-sm font-semibold ${
+                cart.allAtOnce === value
+                  ? 'border-brand-600 bg-brand-600 text-white'
+                  : 'border-ink/15 bg-surface text-ink'
+              }`}
+            >
+              {value ? t('cart.serve.allAtOnce') : t('cart.serve.courses')}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!cart ? (
         <p className="text-sm text-ink-muted">{t('common.loading')}</p>
       ) : cart.lines.length === 0 ? (
         <p className="card p-4 text-sm text-ink-muted">{t('staff.table.empty')}</p>
       ) : (
         <>
-          <ul className="card divide-y divide-ink/10">
-            {cart.lines.map((line) => (
-              <li key={line.menuItemId} className="p-3">
-                <div className="flex items-start gap-3">
-                  <span className="min-w-[3.25rem] shrink-0 font-display text-xl font-bold text-brand-600">
-                    {line.dishNumber ?? '·'}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-snug">
-                      {line.name}
-                      {line.volume && <span className="text-ink-muted"> · {line.volume}</span>}
-                    </p>
-                    <p className="text-xs text-ink-muted">
-                      {formatMoney(line.unitPriceCents)} ·{' '}
-                      {t('staff.table.by', {
-                        who: line.changedBy === 'guest' ? t('staff.table.guest') : line.changedBy,
-                      })}
-                      {!line.isAvailable && (
-                        <span className="ml-1 font-semibold text-danger-500">· {t('staff.table.soldOut')}</span>
+          {groupsOf(cart, t).map((group) => (
+            <section key={group.key} className="space-y-2">
+              <h2 className="h-label">{group.title}</h2>
+              <ul className="card divide-y divide-ink/10">
+                {group.lines.map((line) => (
+                  <li key={`${line.menuItemId}:${line.course}`} className="p-3">
+                    <div className="flex items-start gap-3">
+                      <span className="min-w-[3.25rem] shrink-0 font-display text-xl font-bold text-brand-600">
+                        {line.dishNumber ?? '·'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium leading-snug">
+                          {line.name}
+                          {line.volume && <span className="text-ink-muted"> · {line.volume}</span>}
+                        </p>
+                        <p className="text-xs text-ink-muted">
+                          {formatMoney(line.unitPriceCents)} ·{' '}
+                          {t('staff.table.by', {
+                            who: line.changedBy === 'guest' ? t('staff.table.guest') : line.changedBy,
+                          })}
+                          {!line.isAvailable && (
+                            <span className="ml-1 font-semibold text-danger-500">· {t('staff.table.soldOut')}</span>
+                          )}
+                        </p>
+                      </div>
+                      <span className="font-semibold">{formatMoney(line.unitPriceCents * line.quantity)}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        aria-label={`− ${line.name}`}
+                        className="btn-secondary min-w-tap px-3"
+                        onClick={() => change({ menuItemId: line.menuItemId, delta: -1, course: line.course })}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-8 text-center text-lg font-bold">{line.quantity}</span>
+                      <button
+                        type="button"
+                        aria-label={`+ ${line.name}`}
+                        className="btn-secondary min-w-tap px-3"
+                        onClick={() => change({ menuItemId: line.menuItemId, delta: 1, course: line.course })}
+                      >
+                        +
+                      </button>
+                      {!cart.allAtOnce && line.kind !== 'DRINK' && (
+                        <button
+                          type="button"
+                          className="min-h-tap rounded-xl border border-ink/15 px-3 text-sm font-semibold text-brand-700"
+                          onClick={() =>
+                            change({ menuItemId: line.menuItemId, from: line.course, to: line.course === 2 ? 1 : 2 })
+                          }
+                        >
+                          {line.course === 2 ? t('course.toFirst') : t('course.toSecond')}
+                        </button>
                       )}
-                    </p>
-                  </div>
-                  <span className="font-semibold">{formatMoney(line.unitPriceCents * line.quantity)}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <button
-                    type="button"
-                    aria-label={`− ${line.name}`}
-                    className="btn-secondary min-w-tap px-3"
-                    onClick={() => change({ menuItemId: line.menuItemId, delta: -1 })}
-                  >
-                    −
-                  </button>
-                  <span className="min-w-8 text-center text-lg font-bold">{line.quantity}</span>
-                  <button
-                    type="button"
-                    aria-label={`+ ${line.name}`}
-                    className="btn-secondary min-w-tap px-3"
-                    onClick={() => change({ menuItemId: line.menuItemId, delta: 1 })}
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    className="ml-auto min-h-tap px-2 text-sm text-danger-500"
-                    onClick={() => change({ menuItemId: line.menuItemId, quantity: 0 })}
-                  >
-                    {t('cart.remove')}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                      <button
+                        type="button"
+                        className="ml-auto min-h-tap px-2 text-sm text-danger-500"
+                        onClick={() => change({ menuItemId: line.menuItemId, quantity: 0, course: line.course })}
+                      >
+                        {t('cart.remove')}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
           <div className="flex items-center justify-between text-lg font-semibold">
             <span>{t('staff.table.total')}</span>
             <span>{formatMoney(cart.totalCents)}</span>
@@ -144,7 +185,10 @@ function Table() {
         </>
       )}
 
-      <AddDish onAdd={(menuItemId) => change({ menuItemId, delta: 1 })} />
+      <AddDish
+        courses={!(cart?.allAtOnce ?? false)}
+        onAdd={(menuItemId, course) => change({ menuItemId, delta: 1, course })}
+      />
 
       {cart && cart.lines.length > 0 && (
         <button
@@ -163,6 +207,23 @@ function Table() {
   );
 }
 
+/** In courses: 1. Gang, 2. Gang, drinks. All at once: food, drinks. */
+function groupsOf(cart: TableCart, t: ReturnType<typeof useCustomer>['t']) {
+  const food = cart.lines.filter((l) => l.kind !== 'DRINK');
+  const drinks = cart.lines.filter((l) => l.kind === 'DRINK');
+  const groups = cart.allAtOnce
+    ? [
+        { key: 'food', title: `${t('course.food')} · ${t('cart.serve.allAtOnce')}`, lines: food },
+        { key: 'drinks', title: t('course.drinks'), lines: drinks },
+      ]
+    : [
+        { key: 'c1', title: t('course.1'), lines: food.filter((l) => l.course === 1) },
+        { key: 'c2', title: t('course.2'), lines: food.filter((l) => l.course === 2) },
+        { key: 'drinks', title: t('course.drinks'), lines: drinks },
+      ];
+  return groups.filter((g) => g.lines.length > 0);
+}
+
 function normalise(text: string): string {
   return text
     .normalize('NFD')
@@ -171,8 +232,15 @@ function normalise(text: string): string {
 }
 
 /** Finds a dish by its number or name, for an order taken from the printed menu. */
-function AddDish({ onAdd }: { onAdd: (menuItemId: string) => Promise<void> }) {
+function AddDish({
+  courses,
+  onAdd,
+}: {
+  courses: boolean;
+  onAdd: (menuItemId: string, course: Course) => Promise<void>;
+}) {
   const { t, locale } = useCustomer();
+  const [course, setCourse] = useState<Course>(1);
   const { categories } = useMenu(locale);
   const [query, setQuery] = useState('');
   const [added, setAdded] = useState<string | null>(null);
@@ -194,6 +262,24 @@ function AddDish({ onAdd }: { onAdd: (menuItemId: string) => Promise<void> }) {
   return (
     <section className="space-y-2">
       <h2 className="h-label">{t('staff.table.add')}</h2>
+      {courses && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-ink-muted">{t('staff.table.addTo')}</span>
+          {([1, 2] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={course === value}
+              onClick={() => setCourse(value)}
+              className={`min-h-tap flex-1 rounded-xl border px-3 font-semibold ${
+                course === value ? 'border-brand-600 bg-brand-600 text-white' : 'border-ink/15 bg-surface text-ink'
+              }`}
+            >
+              {t(value === 1 ? 'course.1' : 'course.2')}
+            </button>
+          ))}
+        </div>
+      )}
       <input
         type="search"
         inputMode="search"
@@ -210,7 +296,7 @@ function AddDish({ onAdd }: { onAdd: (menuItemId: string) => Promise<void> }) {
                 type="button"
                 className="flex w-full items-center gap-3 p-3 text-left"
                 onClick={async () => {
-                  await onAdd(item.id);
+                  await onAdd(item.id, courses ? course : 1);
                   setAdded(item.id);
                   window.setTimeout(() => setAdded(null), 1200);
                 }}

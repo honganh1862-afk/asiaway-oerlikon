@@ -142,5 +142,18 @@
   "staff.tables.remove.confirm": "Xóa bàn {table}? Thẻ QR của bàn sẽ không dùng được cho đến khi khôi phục.",
   "staff.error.TABLE_EXISTS": "Bàn này đã có.",
   "staff.error.TABLE_IN_USE": "Hãy dọn bàn trước khi xóa.",
-  "staff.error.VALIDATION_FAILED": "Số bàn gồm 1–8 chữ cái, chữ số hoặc dấu gạch ngang."
+  "staff.error.VALIDATION_FAILED": "Số bàn gồm 1–8 chữ cái, chữ số hoặc dấu gạch ngang.",
+  "cart.serve.title": "Quý khách muốn phục vụ thế nào?",
+  "cart.serve.courses": "Theo đợt",
+  "cart.serve.allAtOnce": "Mang ra cùng lúc",
+  "cart.serve.coursesHint": "Món ăn mặc định ở đợt 1. Chuyển món muốn dùng sau sang đợt 2.",
+  "cart.serve.allHint": "Tất cả món sẽ được mang ra ngay khi sẵn sàng.",
+  "course.1": "Đợt 1",
+  "course.2": "Đợt 2",
+  "course.food": "Món ăn",
+  "course.drinks": "Đồ uống",
+  "course.toSecond": "Để sau: đợt 2",
+  "course.toFirst": "Lên trước: đợt 1",
+  "staff.board.second": "Đợt 2: {count}",
+  "staff.table.addTo": "Thêm vào"
 }
