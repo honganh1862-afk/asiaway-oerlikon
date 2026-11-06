@@ -44,7 +44,8 @@ picks English, German or Vietnamese · chooses how to read the menu: **Classic**
 a book that turns page by page like the printed menu (chalkboard pages, a photo
 opening each section), or **Modern**, the scrolling list with photos and
 categories · switches between the Vietnamese, Thai (Winterthur only) and drinks
-menus in either · adds dishes to a cart that survives a reload · shows the cart
+menus in either (in Winterthur the table decides: 1xx Vietnamese, 2xx both, 3xx
+Thai, with the desserts on both) · adds dishes to a cart that survives a reload · shows the cart
 to the waiter, who takes the order (the phone sends no order) · when finished,
 is shown where to pay, with the table number to give at the counter, and invited
 to review the restaurant on Google. A four-step guide (choose · waiter takes the
