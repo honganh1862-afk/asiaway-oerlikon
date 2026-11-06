@@ -30,13 +30,21 @@ import { readTableCookie } from '../../domain/table';
  * Either way, nothing reaches the kitchen: the waiter takes the order at the
  * table and keys it into the POS.
  */
+export type Course = 1 | 2;
+
 export interface CartLine {
   readonly menuItemId: string;
   readonly name: string;
   readonly dishNumber: string | null;
   readonly unitPriceCents: number;
   readonly quantity: number;
+  /** 1. Gang or 2. Gang; a cart on this phone only, and drinks, are always 1. */
+  readonly course?: Course;
+  /** Known for a table's shared cart, which shows drinks apart. */
+  readonly kind?: 'FOOD' | 'DRINK';
 }
+
+const courseOf = (line: { course?: Course }): Course => line.course ?? 1;
 
 interface CustomerState {
   locale: Locale;
@@ -44,8 +52,13 @@ interface CustomerState {
   t: Translator;
   cart: CartLine[];
   addToCart: (line: Omit<CartLine, 'quantity'>, quantity?: number) => void;
-  setQuantity: (menuItemId: string, quantity: number) => void;
-  removeFromCart: (menuItemId: string) => void;
+  setQuantity: (menuItemId: string, quantity: number, course?: Course) => void;
+  removeFromCart: (menuItemId: string, course?: Course) => void;
+  /** Moves a dish, all of it, to the other course (a table's shared cart only). */
+  moveToCourse: (menuItemId: string, from: Course, to: Course) => void;
+  /** The table wants everything at once rather than in courses. */
+  allAtOnce: boolean;
+  setAllAtOnce: (allAtOnce: boolean) => void;
   clearCart: () => void;
   /** How many of one dish are in the cart, for the badge on its add button. */
   quantityOf: (menuItemId: string) => number;
@@ -63,12 +76,15 @@ const CART_KEY = 'aw.cart';
 const SHARED_CART_POLL_MS = 4000;
 
 interface ServerCart {
+  allAtOnce: boolean;
   lines: {
     menuItemId: string;
     name: string;
     dishNumber: string | null;
     unitPriceCents: number;
     quantity: number;
+    course: Course;
+    kind: 'FOOD' | 'DRINK';
   }[];
 }
 
@@ -79,8 +95,16 @@ function fromServer(cart: ServerCart): CartLine[] {
     dishNumber: l.dishNumber,
     unitPriceCents: l.unitPriceCents,
     quantity: l.quantity,
+    course: l.course,
+    kind: l.kind,
   }));
 }
+
+type CartChange =
+  | { menuItemId: string; delta: number; course?: Course }
+  | { menuItemId: string; quantity: number; course?: Course }
+  | { menuItemId: string; from: Course; to: Course }
+  | { allAtOnce: boolean };
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -114,6 +138,7 @@ export function CustomerProvider({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [sharedTable, setSharedTable] = useState<string | null>(null);
+  const [allAtOnce, setAllAtOnceState] = useState(false);
 
   useEffect(() => {
     const storedLocale = read<string>(LOCALE_KEY, DEFAULT_LOCALE);
@@ -147,14 +172,17 @@ export function CustomerProvider({
       });
       if (!response.ok) return;
       const data = (await response.json()) as ServerCart;
-      if (seen === changes.current && inFlight.current === 0) setCart(fromServer(data));
+      if (seen === changes.current && inFlight.current === 0) {
+        setCart(fromServer(data));
+        setAllAtOnceState(data.allAtOnce);
+      }
     } catch {
       // Offline for a moment: keep showing the last list.
     }
   }, [sharedTable, locale]);
 
   const send = useCallback(
-    async (change: { menuItemId: string; delta: number } | { menuItemId: string; quantity: number }) => {
+    async (change: CartChange) => {
       if (!sharedTable) return;
       changes.current += 1;
       inFlight.current += 1;
@@ -168,8 +196,11 @@ export function CustomerProvider({
           },
         );
         inFlight.current -= 1;
-        if (response.ok && inFlight.current === 0) setCart(fromServer((await response.json()) as ServerCart));
-        else if (!response.ok) await refresh();
+        if (response.ok && inFlight.current === 0) {
+          const data = (await response.json()) as ServerCart;
+          setCart(fromServer(data));
+          setAllAtOnceState(data.allAtOnce);
+        } else if (!response.ok) await refresh();
       } catch {
         inFlight.current -= 1;
         await refresh();
@@ -220,18 +251,15 @@ export function CustomerProvider({
     document.documentElement.lang = next;
   }, []);
 
+  // A dish added from the menu goes into the 1st course.
   const addToCart = useCallback(
     (line: Omit<CartLine, 'quantity'>, quantity = 1) => {
       setCart((current) => {
-        const existing = current.find((l) => l.menuItemId === line.menuItemId);
-        if (existing) {
-          return current.map((l) =>
-            l.menuItemId === line.menuItemId
-              ? { ...l, quantity: Math.min(99, l.quantity + quantity) }
-              : l,
-          );
+        const same = (l: CartLine) => l.menuItemId === line.menuItemId && courseOf(l) === 1;
+        if (current.some(same)) {
+          return current.map((l) => (same(l) ? { ...l, quantity: Math.min(99, l.quantity + quantity) } : l));
         }
-        return [...current, { ...line, quantity: Math.min(99, quantity) }];
+        return [...current, { ...line, course: 1, quantity: Math.min(99, quantity) }];
       });
       void send({ menuItemId: line.menuItemId, delta: quantity });
     },
@@ -239,25 +267,50 @@ export function CustomerProvider({
   );
 
   const setQuantity = useCallback(
-    (menuItemId: string, quantity: number) => {
+    (menuItemId: string, quantity: number, course: Course = 1) => {
+      const same = (l: CartLine) => l.menuItemId === menuItemId && courseOf(l) === course;
       setCart((current) =>
         quantity <= 0
-          ? current.filter((l) => l.menuItemId !== menuItemId)
-          : current.map((l) =>
-              l.menuItemId === menuItemId ? { ...l, quantity: Math.min(99, quantity) } : l,
-            ),
+          ? current.filter((l) => !same(l))
+          : current.map((l) => (same(l) ? { ...l, quantity: Math.min(99, quantity) } : l)),
       );
-      void send({ menuItemId, quantity: Math.max(0, Math.min(99, quantity)) });
+      void send({ menuItemId, quantity: Math.max(0, Math.min(99, quantity)), course });
     },
     [send],
   );
 
   const removeFromCart = useCallback(
-    (menuItemId: string) => {
-      setCart((current) => current.filter((l) => l.menuItemId !== menuItemId));
-      void send({ menuItemId, quantity: 0 });
+    (menuItemId: string, course: Course = 1) => {
+      setCart((current) => current.filter((l) => !(l.menuItemId === menuItemId && courseOf(l) === course)));
+      void send({ menuItemId, quantity: 0, course });
     },
     [send],
+  );
+
+  const moveToCourse = useCallback(
+    (menuItemId: string, from: Course, to: Course) => {
+      if (!sharedTable || from === to) return;
+      setCart((current) => {
+        const moving = current.find((l) => l.menuItemId === menuItemId && courseOf(l) === from);
+        if (!moving) return current;
+        const rest = current.filter((l) => l !== moving);
+        const there = rest.find((l) => l.menuItemId === menuItemId && courseOf(l) === to);
+        return there
+          ? rest.map((l) => (l === there ? { ...l, quantity: Math.min(99, l.quantity + moving.quantity) } : l))
+          : [...rest, { ...moving, course: to }];
+      });
+      void send({ menuItemId, from, to });
+    },
+    [send, sharedTable],
+  );
+
+  const setAllAtOnce = useCallback(
+    (value: boolean) => {
+      if (!sharedTable) return;
+      setAllAtOnceState(value);
+      void send({ allAtOnce: value });
+    },
+    [send, sharedTable],
   );
 
   // A shared cart is the whole table's: one guest cannot empty it for everyone.
@@ -267,7 +320,8 @@ export function CustomerProvider({
   }, [sharedTable]);
 
   const quantityOf = useCallback(
-    (menuItemId: string) => cart.find((l) => l.menuItemId === menuItemId)?.quantity ?? 0,
+    (menuItemId: string) =>
+      cart.filter((l) => l.menuItemId === menuItemId).reduce((n, l) => n + l.quantity, 0),
     [cart],
   );
 
@@ -280,13 +334,29 @@ export function CustomerProvider({
       addToCart,
       setQuantity,
       removeFromCart,
+      moveToCourse,
+      allAtOnce,
+      setAllAtOnce,
       clearCart,
       quantityOf,
       cartCount: cart.reduce((n, l) => n + l.quantity, 0),
       cartTotalCents: cart.reduce((n, l) => n + l.unitPriceCents * l.quantity, 0),
       sharedTable,
     }),
-    [locale, setLocale, cart, addToCart, setQuantity, removeFromCart, clearCart, quantityOf, sharedTable],
+    [
+      locale,
+      setLocale,
+      cart,
+      addToCart,
+      setQuantity,
+      removeFromCart,
+      moveToCourse,
+      allAtOnce,
+      setAllAtOnce,
+      clearCart,
+      quantityOf,
+      sharedTable,
+    ],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
