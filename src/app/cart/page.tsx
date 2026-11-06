@@ -14,7 +14,7 @@ import { formatMoney } from '../../lib/format';
  * large — they are what the waiter types.
  */
 export default function CartPage() {
-  const { t, cart, setQuantity, removeFromCart, clearCart, cartTotalCents } = useCustomer();
+  const { t, cart, setQuantity, removeFromCart, clearCart, cartTotalCents, sharedTable } = useCustomer();
   const router = useRouter();
 
   if (cart.length === 0) {
@@ -38,8 +38,17 @@ export default function CartPage() {
 
       {/* Said before the list, so nobody waits for food they have not ordered. */}
       <div className="border-l-4 border-brand-600 bg-brand-50 p-3 text-sm text-ink">
-        <p className="font-semibold">{t('cart.waiter.title')}</p>
-        <p className="mt-0.5">{t('cart.waiter.body')}</p>
+        {sharedTable ? (
+          <>
+            <p className="font-semibold">{t('cart.shared.title', { table: sharedTable })}</p>
+            <p className="mt-0.5">{t('cart.shared.body', { table: sharedTable })}</p>
+          </>
+        ) : (
+          <>
+            <p className="font-semibold">{t('cart.waiter.title')}</p>
+            <p className="mt-0.5">{t('cart.waiter.body')}</p>
+          </>
+        )}
       </div>
 
       <ul className="card divide-y divide-ink/10">
@@ -106,15 +115,18 @@ export default function CartPage() {
       </button>
       <PayPrompt t={t} />
 
-      <button
-        type="button"
-        className="min-h-tap w-full text-sm text-ink-muted underline underline-offset-4"
-        onClick={() => {
-          if (window.confirm(t('cart.clear.confirm'))) clearCart();
-        }}
-      >
-        {t('cart.clear')}
-      </button>
+      {/* A table's shared cart is everyone's: the staff clear it after paying. */}
+      {!sharedTable && (
+        <button
+          type="button"
+          className="min-h-tap w-full text-sm text-ink-muted underline underline-offset-4"
+          onClick={() => {
+            if (window.confirm(t('cart.clear.confirm'))) clearCart();
+          }}
+        >
+          {t('cart.clear')}
+        </button>
+      )}
     </div>
   );
 }
