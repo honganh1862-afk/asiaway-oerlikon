@@ -100,23 +100,27 @@ export function useFoodMenus(): FoodMenus {
 
 /**
  * The tabs a guest sees. Where both printed menus are served (Winterthur) each
- * gets its own: Vietnamesisch · Thai · Getränke, or just the one the table is
- * given. Elsewhere it stays Speisen · Getränke.
+ * gets its own: Vietnamesisch · Thai, or just the one the table is given. Then
+ * the desserts, for every table, and the drinks. Elsewhere it stays
+ * Speisen · Getränke.
  */
 export function menuTabs(
   categories: Category[] | null,
   t: Translator,
   menus: FoodMenus = 'BOTH',
 ): { id: MenuTab; label: string }[] {
-  const hasThai = (categories ?? []).some((c) => menuTabFor(c) === 'THAI');
-  const drinks = { id: 'DRINK' as const, label: t('menu.drinks') };
-  if (!hasThai) return [{ id: 'FOOD', label: t('menu.food') }, drinks];
-
-  const vietnamese = { id: 'FOOD' as const, label: t('menu.vietnamese') };
-  const thai = { id: 'THAI' as const, label: t('menu.thai') };
-  if (menus === 'VIETNAMESE') return [vietnamese, drinks];
-  if (menus === 'THAI') return [thai, drinks];
-  return [vietnamese, thai, drinks];
+  const has = (tab: MenuTab) => (categories ?? []).some((c) => menuTabFor(c) === tab);
+  const food: { id: MenuTab; label: string }[] = !has('THAI')
+    ? [{ id: 'FOOD', label: t('menu.food') }]
+    : [
+        ...(menus !== 'THAI' ? [{ id: 'FOOD' as const, label: t('menu.vietnamese') }] : []),
+        ...(menus !== 'VIETNAMESE' ? [{ id: 'THAI' as const, label: t('menu.thai') }] : []),
+      ];
+  return [
+    ...food,
+    ...(has('DESSERT') ? [{ id: 'DESSERT' as const, label: t('menu.desserts') }] : []),
+    { id: 'DRINK', label: t('menu.drinks') },
+  ];
 }
 
 /** The tab to open: the one the guest last had, if this table has it, else the first. */
@@ -130,7 +134,7 @@ const TAB_KEY = 'aw.menuTab';
 export function readMenuTab(): MenuTab {
   try {
     const stored = window.sessionStorage.getItem(TAB_KEY);
-    if (stored === 'FOOD' || stored === 'THAI' || stored === 'DRINK') return stored;
+    if (stored === 'FOOD' || stored === 'THAI' || stored === 'DESSERT' || stored === 'DRINK') return stored;
   } catch {
     // Blocked storage: start on the first tab.
   }

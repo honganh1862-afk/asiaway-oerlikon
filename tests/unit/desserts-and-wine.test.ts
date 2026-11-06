@@ -14,11 +14,11 @@ describe('the dessert card', () => {
   const desserts = parseMenuCsv(read('dessert_menu_EN_DE_VI.csv'), { allowUndeclaredAllergens: true });
   const byNumber = new Map(desserts.items.map((i) => [i.dishNumber, i]));
 
-  it('has every printed dessert, n° 130 to 137, on the food tab', () => {
+  it('has every printed dessert, n° 130 to 137, on the dessert tab', () => {
     expect(new Set(desserts.items.map((i) => i.baseDishNumber))).toEqual(
       new Set(['130', '131', '132', '133', '134', '135', '136', '137']),
     );
-    expect(desserts.categories.map((c) => menuTabFor(c))).toEqual(['FOOD']);
+    expect(desserts.categories.map((c) => menuTabFor(c))).toEqual(['DESSERT']);
   });
 
   it('keeps the printed prices and allergens', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoriesOnTab, foodMenusForTable, isOnTab } from '../../src/domain/menu/menus';
+import { categoriesOnTab, foodMenusForTable, menuTabFor } from '../../src/domain/menu/menus';
 import { menuTabs, openTab, type Category } from '../../src/components/customer/useMenu';
 import { RESTAURANT_PROFILES } from '../../src/config/restaurant';
 
@@ -44,25 +44,17 @@ describe('the food menu a Winterthur table is given', () => {
 describe('the tabs each table sees', () => {
   const ids = (menus: Parameters<typeof menuTabs>[2]) => menuTabs(winterthurMenu, t, menus).map((x) => x.id);
 
-  it('shows the Vietnamese menu at 1xx, both at 2xx and the Thai menu at 3xx, with drinks on all', () => {
-    expect(ids('VIETNAMESE')).toEqual(['FOOD', 'DRINK']);
-    expect(ids('BOTH')).toEqual(['FOOD', 'THAI', 'DRINK']);
-    expect(ids('THAI')).toEqual(['THAI', 'DRINK']);
+  it('shows the Vietnamese menu at 1xx, both at 2xx and the Thai menu at 3xx, with desserts and drinks on all', () => {
+    expect(ids('VIETNAMESE')).toEqual(['FOOD', 'DESSERT', 'DRINK']);
+    expect(ids('BOTH')).toEqual(['FOOD', 'THAI', 'DESSERT', 'DRINK']);
+    expect(ids('THAI')).toEqual(['THAI', 'DESSERT', 'DRINK']);
   });
 
-  it('shows the desserts on both food tabs, and nowhere else', () => {
-    const dessert = category('dessert');
-    expect(isOnTab(dessert, 'FOOD')).toBe(true);
-    expect(isOnTab(dessert, 'THAI')).toBe(true);
-    expect(isOnTab(dessert, 'DRINK')).toBe(false);
-    expect(isOnTab(category('appetizer'), 'THAI')).toBe(false);
-    expect(isOnTab(category('thai-curry'), 'FOOD')).toBe(false);
-  });
-
-  it('puts the desserts at the end of each food tab', () => {
-    const slugs = (tab: 'FOOD' | 'THAI') => categoriesOnTab(winterthurMenu, tab).map((c) => c.slug);
-    expect(slugs('FOOD')).toEqual(['appetizer', 'dessert']);
-    expect(slugs('THAI')).toEqual(['thai-curry', 'dessert']);
+  it('puts the desserts on a tab of their own, and nowhere else', () => {
+    expect(menuTabFor(category('dessert'))).toBe('DESSERT');
+    expect(categoriesOnTab(winterthurMenu, 'DESSERT').map((c) => c.slug)).toEqual(['dessert']);
+    expect(categoriesOnTab(winterthurMenu, 'FOOD').map((c) => c.slug)).toEqual(['appetizer']);
+    expect(categoriesOnTab(winterthurMenu, 'THAI').map((c) => c.slug)).toEqual(['thai-curry']);
   });
 
   it('opens the first tab when the remembered one is not at this table', () => {
@@ -74,5 +66,7 @@ describe('the tabs each table sees', () => {
   it('leaves a restaurant without the Thai menu as it was', () => {
     const oerlikon = [category('appetizer'), category('beer', 'DRINK')];
     expect(menuTabs(oerlikon, t, 'BOTH').map((x) => x.label)).toEqual(['menu.food', 'menu.drinks']);
+    // No desserts loaded, no dessert tab.
+    expect(menuTabs(oerlikon, t, 'BOTH').map((x) => x.id)).not.toContain('DESSERT');
   });
 });
