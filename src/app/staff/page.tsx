@@ -83,6 +83,13 @@ function Board() {
                       </span>
                       <span className="block text-sm text-ink-muted">
                         {ago === 0 ? t('staff.ago.now') : t('staff.ago.minutes', { n: ago })}
+                        {table.cart!.allAtOnce ? (
+                          <span className="ml-2 font-semibold text-brand-700">· {t('cart.serve.allAtOnce')}</span>
+                        ) : table.cart!.secondCourse > 0 ? (
+                          <span className="ml-2 font-semibold text-brand-700">
+                            · {t('staff.board.second', { count: table.cart!.secondCourse })}
+                          </span>
+                        ) : null}
                       </span>
                     </span>
                     <span aria-hidden="true" className="text-2xl text-ink-muted">

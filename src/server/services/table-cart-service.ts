@@ -4,7 +4,7 @@ import { generateQrToken } from '../../domain/session/qr-token';
 import { isTableNumber } from '../../domain/table';
 import type { Locale } from '../../i18n/locales';
 import type { AppDatabase as Db } from '../db/client';
-import { menuItems, restaurantTables, tableCartLines, tableCarts } from '../db/schema';
+import { menuCategories, menuItems, restaurantTables, tableCartLines, tableCarts } from '../db/schema';
 
 /**
  * One shared cart per table.
@@ -18,7 +18,16 @@ import { menuItems, restaurantTables, tableCartLines, tableCarts } from '../db/s
  * Changes are made line by line — add one, take one away, set a quantity — and
  * each is a single statement, so two guests tapping at the same moment both
  * count rather than one overwriting the other.
+ *
+ * Each line belongs to a course: the first (1. Gang), entered in the POS at
+ * once, or the second (2. Gang), held until the staff release it. A dish
+ * starts in the first; the same dish can be in both. Drinks have no course
+ * and always count as the first: they are served as soon as they are ordered.
+ * A table can also ask for everything at once; its lines keep their courses,
+ * so switching back restores the split.
  */
+
+export type Course = 1 | 2;
 
 /** Who changed a line: a guest's phone, or the member of staff by name. */
 export type CartActor = 'guest' | { staff: string };
@@ -34,6 +43,8 @@ export interface TableCartLine {
   readonly isAvailable: boolean;
   /** 'guest', or the name of the member of staff who last changed the line. */
   readonly changedBy: string;
+  readonly course: Course;
+  readonly kind: 'FOOD' | 'DRINK';
 }
 
 export interface TableCart {
@@ -43,6 +54,8 @@ export interface TableCart {
   readonly totalCents: number;
   /** When the cart last changed; null for a table with no open cart. */
   readonly updatedAt: string | null;
+  /** Everything served at once: no second course held back. */
+  readonly allAtOnce: boolean;
 }
 
 export const MAX_QUANTITY = 99;
@@ -79,18 +92,19 @@ export async function getTableCart(db: Db, tableNumber: string, locale: Locale):
     .select()
     .from(tableCarts)
     .where(and(eq(tableCarts.tableId, table.id), isNull(tableCarts.clearedAt)));
-  if (!cart) return { tableNumber, lines: [], count: 0, totalCents: 0, updatedAt: null };
+  if (!cart) return { tableNumber, lines: [], count: 0, totalCents: 0, updatedAt: null, allAtOnce: false };
 
   const rows = await db
-    .select({ line: tableCartLines, item: menuItems })
+    .select({ line: tableCartLines, item: menuItems, kind: menuCategories.kind })
     .from(tableCartLines)
     .innerJoin(menuItems, eq(menuItems.id, tableCartLines.menuItemId))
+    .innerJoin(menuCategories, eq(menuCategories.id, menuItems.categoryId))
     .where(eq(tableCartLines.cartId, cart.id))
-    .orderBy(asc(tableCartLines.addedAt), asc(menuItems.sortOrder));
+    .orderBy(asc(tableCartLines.course), asc(tableCartLines.addedAt), asc(menuItems.sortOrder));
 
   const lines = rows
     .filter(({ line }) => line.quantity > 0)
-    .map(({ line, item }) => ({
+    .map(({ line, item, kind }) => ({
       menuItemId: item.id,
       dishNumber: item.dishNumber,
       name: localised(item, locale),
@@ -100,6 +114,8 @@ export async function getTableCart(db: Db, tableNumber: string, locale: Locale):
       quantity: line.quantity,
       isAvailable: item.isAvailable,
       changedBy: line.changedBy,
+      course: (line.course === 2 ? 2 : 1) as Course,
+      kind,
     }));
 
   return {
@@ -108,67 +124,109 @@ export async function getTableCart(db: Db, tableNumber: string, locale: Locale):
     count: lines.reduce((n, l) => n + l.quantity, 0),
     totalCents: lines.reduce((n, l) => n + l.quantity * l.unitPriceCents, 0),
     updatedAt: cart.updatedAt.toISOString(),
+    allAtOnce: cart.allAtOnce,
   };
 }
 
 export type CartChange =
-  | { readonly menuItemId: string; readonly delta: number }
-  | { readonly menuItemId: string; readonly quantity: number };
+  | { readonly menuItemId: string; readonly delta: number; readonly course?: Course }
+  | { readonly menuItemId: string; readonly quantity: number; readonly course?: Course }
+  /** Moves a dish, all of it, from one course to the other. */
+  | { readonly menuItemId: string; readonly from: Course; readonly to: Course };
 
 /**
- * Adds to, takes from, or sets one line of a table's cart, opening the cart if
- * the table has none. A guest cannot add a dish that is sold out; the staff can,
- * since they are the ones who know.
+ * Adds to, takes from, sets or moves one line of a table's cart, opening the
+ * cart if the table has none. A guest cannot add a dish that is sold out; the
+ * staff can, since they are the ones who know.
  */
 export async function changeCartLine(db: Db, tableNumber: string, change: CartChange, actor: CartActor) {
   const table = await activeTable(db, tableNumber);
   const by = actorName(actor);
 
   const [item] = await db
-    .select({ id: menuItems.id, isActive: menuItems.isActive, isAvailable: menuItems.isAvailable })
+    .select({ id: menuItems.id, isActive: menuItems.isActive, isAvailable: menuItems.isAvailable, kind: menuCategories.kind })
     .from(menuItems)
+    .innerJoin(menuCategories, eq(menuCategories.id, menuItems.categoryId))
     .where(eq(menuItems.id, change.menuItemId));
   if (!item || !item.isActive) throw domainError('ITEMS_UNAVAILABLE', 'No such dish on the menu');
 
-  const adding = 'delta' in change ? change.delta > 0 : change.quantity > 0;
+  const adding = 'delta' in change ? change.delta > 0 : 'quantity' in change ? change.quantity > 0 : false;
   if (adding && actor === 'guest' && !item.isAvailable) {
     throw domainError('ITEMS_UNAVAILABLE', 'That dish is sold out', { menuItemId: item.id });
   }
+  // A drink has no course: it is served at once.
+  const courseOf = (c: Course | undefined): Course => (item.kind === 'DRINK' ? 1 : c === 2 ? 2 : 1);
 
   await db.transaction(async (tx: Db) => {
     // The partial unique index allows one open cart per table: a second phone
     // opening it at the same moment finds the first one's.
     await tx.insert(tableCarts).values({ tableId: table.id }).onConflictDoNothing();
     const cartId = (await openCartId(tx, table.id))!;
-    const line = and(eq(tableCartLines.cartId, cartId), eq(tableCartLines.menuItemId, item.id));
-
-    if ('delta' in change) {
-      const delta = Math.trunc(change.delta);
+    const lineIn = (course: Course) =>
+      and(
+        eq(tableCartLines.cartId, cartId),
+        eq(tableCartLines.menuItemId, item.id),
+        eq(tableCartLines.course, course),
+      );
+    const target = [tableCartLines.cartId, tableCartLines.menuItemId, tableCartLines.course];
+    const addTo = async (course: Course, delta: number) => {
       await tx
         .insert(tableCartLines)
-        .values({ cartId, menuItemId: item.id, quantity: clamp(delta), changedBy: by })
+        .values({ cartId, menuItemId: item.id, course, quantity: clamp(delta), changedBy: by })
         .onConflictDoUpdate({
-          target: [tableCartLines.cartId, tableCartLines.menuItemId],
+          target,
           set: {
             quantity: sql`least(${MAX_QUANTITY}, greatest(0, ${tableCartLines.quantity} + ${delta}))`,
             changedBy: by,
           },
         });
-    } else if (change.quantity <= 0) {
-      await tx.delete(tableCartLines).where(line);
+    };
+
+    let touched: Course[];
+    if ('from' in change) {
+      const from = courseOf(change.from);
+      const to = courseOf(change.to);
+      touched = [from, to];
+      if (from !== to) {
+        // Taken whole out of one course and added to the other, in one step.
+        const moved = await tx.delete(tableCartLines).where(lineIn(from)).returning({ quantity: tableCartLines.quantity });
+        const quantity = moved[0]?.quantity ?? 0;
+        if (quantity > 0) await addTo(to, quantity);
+      }
+    } else if ('delta' in change) {
+      const course = courseOf(change.course);
+      touched = [course];
+      await addTo(course, Math.trunc(change.delta));
     } else {
-      const quantity = clamp(change.quantity);
-      await tx
-        .insert(tableCartLines)
-        .values({ cartId, menuItemId: item.id, quantity, changedBy: by })
-        .onConflictDoUpdate({
-          target: [tableCartLines.cartId, tableCartLines.menuItemId],
-          set: { quantity, changedBy: by },
-        });
+      const course = courseOf(change.course);
+      touched = [course];
+      if (change.quantity <= 0) {
+        await tx.delete(tableCartLines).where(lineIn(course));
+      } else {
+        const quantity = clamp(change.quantity);
+        await tx
+          .insert(tableCartLines)
+          .values({ cartId, menuItemId: item.id, course, quantity, changedBy: by })
+          .onConflictDoUpdate({ target, set: { quantity, changedBy: by } });
+      }
     }
 
-    await tx.delete(tableCartLines).where(and(line, eq(tableCartLines.quantity, 0)));
+    for (const course of touched) {
+      await tx.delete(tableCartLines).where(and(lineIn(course), eq(tableCartLines.quantity, 0)));
+    }
     await tx.update(tableCarts).set({ updatedAt: new Date() }).where(eq(tableCarts.id, cartId));
+  });
+}
+
+/** Everything at once, or courses: the table's choice, kept on its open cart. */
+export async function setAllAtOnce(db: Db, tableNumber: string, allAtOnce: boolean): Promise<void> {
+  const table = await activeTable(db, tableNumber);
+  await db.transaction(async (tx: Db) => {
+    await tx.insert(tableCarts).values({ tableId: table.id }).onConflictDoNothing();
+    await tx
+      .update(tableCarts)
+      .set({ allAtOnce, updatedAt: new Date() })
+      .where(and(eq(tableCarts.tableId, table.id), isNull(tableCarts.clearedAt)));
   });
 }
 
@@ -192,7 +250,13 @@ export interface TableOverview {
   readonly area: 'INSIDE' | 'OUTSIDE' | null;
   readonly isActive: boolean;
   /** The open cart, or null for a free table. */
-  readonly cart: { count: number; totalCents: number; updatedAt: string } | null;
+  readonly cart: {
+    count: number;
+    totalCents: number;
+    updatedAt: string;
+    secondCourse: number;
+    allAtOnce: boolean;
+  } | null;
 }
 
 /** Every table, active or not, with a summary of its open cart. */
@@ -202,14 +266,16 @@ export async function listTables(db: Db): Promise<TableOverview[]> {
     .select({
       tableId: tableCarts.tableId,
       updatedAt: tableCarts.updatedAt,
+      allAtOnce: tableCarts.allAtOnce,
       count: sql<number>`coalesce(sum(${tableCartLines.quantity}), 0)::int`,
       totalCents: sql<number>`coalesce(sum(${tableCartLines.quantity} * ${menuItems.priceCents}), 0)::int`,
+      secondCourse: sql<number>`coalesce(sum(${tableCartLines.quantity}) filter (where ${tableCartLines.course} = 2), 0)::int`,
     })
     .from(tableCarts)
     .leftJoin(tableCartLines, eq(tableCartLines.cartId, tableCarts.id))
     .leftJoin(menuItems, eq(menuItems.id, tableCartLines.menuItemId))
     .where(isNull(tableCarts.clearedAt))
-    .groupBy(tableCarts.tableId, tableCarts.updatedAt);
+    .groupBy(tableCarts.tableId, tableCarts.updatedAt, tableCarts.allAtOnce);
   const byTable = new Map(carts.map((c) => [c.tableId, c]));
 
   return tables
@@ -226,6 +292,8 @@ export async function listTables(db: Db): Promise<TableOverview[]> {
                 count: Number(cart.count),
                 totalCents: Number(cart.totalCents),
                 updatedAt: cart.updatedAt.toISOString(),
+                secondCourse: Number(cart.secondCourse),
+                allAtOnce: cart.allAtOnce,
               }
             : null,
       };

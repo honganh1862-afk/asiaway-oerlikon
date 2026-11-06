@@ -142,5 +142,18 @@
   "staff.tables.remove.confirm": "Remove table {table}? Its card stops working until you bring it back.",
   "staff.error.TABLE_EXISTS": "That table already exists.",
   "staff.error.TABLE_IN_USE": "Clear the table before removing it.",
-  "staff.error.VALIDATION_FAILED": "A table number is 1–8 letters, digits or dashes."
+  "staff.error.VALIDATION_FAILED": "A table number is 1–8 letters, digits or dashes.",
+  "cart.serve.title": "How would you like your food served?",
+  "cart.serve.courses": "In courses",
+  "cart.serve.allAtOnce": "All at once",
+  "cart.serve.coursesHint": "Dishes start in the 1st course. Move any you would like later to the 2nd course.",
+  "cart.serve.allHint": "Everything is brought to the table as soon as it is ready.",
+  "course.1": "1st course",
+  "course.2": "2nd course",
+  "course.food": "Food",
+  "course.drinks": "Drinks",
+  "course.toSecond": "Later: 2nd course",
+  "course.toFirst": "Sooner: 1st course",
+  "staff.board.second": "2nd course: {count}",
+  "staff.table.addTo": "Add to"
 }

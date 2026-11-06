@@ -60,7 +60,13 @@ screen. Tap your name and type the PIN; the sign-in lasts 12 hours.
 - Tap a table to see its list, by dish number. Change a quantity with − and +,
   or remove a line. For a guest ordering from the printed menu, open their table
   (under **All tables**) and add the dish by number or name.
+- Each table is served **in courses** (1. Gang, 2. Gang) or **all at once**: the
+  guests choose at the top of their cart, and you can change it on the table's
+  page. In courses, dishes start in the 1. Gang and move with one tap; drinks
+  have no course. The board shows "2nd course: n" or "All at once" per table.
 - Take the order into the till as before: nothing here reaches the kitchen.
+  Send the 1. Gang and drinks now and hold the 2. Gang; release it once the
+  1. Gang is cleared (SOP-01).
 - When the table has paid, tap **Paid — clear table**. The list empties on the
   guests' phones too, ready for the next guests.
 - **Manage tables** adds a table, sets inside or outside, or removes one (a
